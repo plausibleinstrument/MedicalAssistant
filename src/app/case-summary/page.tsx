@@ -3,6 +3,7 @@ import CaseSummaryView from "@/components/CaseSummaryView";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { CaseSummary } from "@/lib/types";
+import { getStrings } from "@/lib/strings";
 
 export default async function CaseSummaryPage() {
   const supabase = createClient();
@@ -25,17 +26,15 @@ export default async function CaseSummaryPage() {
     .limit(1)
     .maybeSingle();
 
+  const t = await getStrings();
+
   return (
     <div>
       <Nav />
       <main className="mx-auto max-w-3xl px-4 py-8">
-        <h1 className="mb-1 text-lg font-semibold">Case summary</h1>
-        <p className="mb-4 text-sm text-stone-500">
-          A living summary of Dad&apos;s case that Claude keeps up to date — conditions, care team,
-          current medications, recent developments, and open questions. Regenerate it any time new
-          records come in.
-        </p>
-        <CaseSummaryView initialSummary={(summary as CaseSummary) || null} />
+        <h1 className="mb-1 text-lg font-semibold">{t.caseSummaryTitle}</h1>
+        <p className="mb-4 text-sm text-stone-500">{t.caseSummaryDescription}</p>
+        <CaseSummaryView initialSummary={(summary as CaseSummary) || null} t={t} />
       </main>
     </div>
   );

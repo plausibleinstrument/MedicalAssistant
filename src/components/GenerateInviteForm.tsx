@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { Strings } from "@/lib/strings";
 
-export default function GenerateInviteForm() {
+export default function GenerateInviteForm({ t }: { t: Strings }) {
   const [maxUses, setMaxUses] = useState(5);
   const [loading, setLoading] = useState(false);
   const [code, setCode] = useState<string | null>(null);
@@ -20,7 +21,7 @@ export default function GenerateInviteForm() {
     const data = await res.json();
     setLoading(false);
     if (!res.ok) {
-      setError(data.error || "Something went wrong.");
+      setError(data.error || t.somethingWrong);
       return;
     }
     setCode(data.invite.code);
@@ -28,15 +29,11 @@ export default function GenerateInviteForm() {
 
   return (
     <div className="card">
-      <h2 className="mb-1 font-medium">Invite family members</h2>
-      <p className="mb-3 text-sm text-stone-500">
-        One code can be shared with multiple people — set how many below. Everyone signs in with
-        their own Google account and enters the same code; each person only needs to do that once.
-        The code is valid for 14 days from when you generate it.
-      </p>
+      <h2 className="mb-1 font-medium">{t.inviteFamily}</h2>
+      <p className="mb-3 text-sm text-stone-500">{t.inviteDescription}</p>
       <div className="mb-3 flex items-center gap-2">
         <label className="label mb-0" htmlFor="max-uses">
-          How many people can use this code
+          {t.howManyCanUse}
         </label>
         <input
           id="max-uses"
@@ -48,14 +45,14 @@ export default function GenerateInviteForm() {
         />
       </div>
       <button className="btn-primary" onClick={generate} disabled={loading}>
-        {loading ? "Generating…" : "Generate invite code"}
+        {loading ? t.generating : t.generateCode}
       </button>
       {code && (
         <div className="mt-3 rounded-md bg-brand-50 p-3 text-sm">
-          <span className="text-stone-500">Code: </span>
+          <span className="text-stone-500">{t.codeLabelText} </span>
           <span className="font-mono font-semibold text-brand-700">{code}</span>
           <span className="ml-2 text-stone-400">
-            (works for up to {maxUses} {maxUses === 1 ? "person" : "people"})
+            ({t.worksForUpTo} {maxUses} {maxUses === 1 ? t.person : t.people})
           </span>
         </div>
       )}

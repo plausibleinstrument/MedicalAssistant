@@ -2,9 +2,16 @@
 
 import { useState } from "react";
 import { CaseSummary } from "@/lib/types";
+import { Strings } from "@/lib/strings";
 import Markdown from "./Markdown";
 
-export default function CaseSummaryView({ initialSummary }: { initialSummary: CaseSummary | null }) {
+export default function CaseSummaryView({
+  initialSummary,
+  t,
+}: {
+  initialSummary: CaseSummary | null;
+  t: Strings;
+}) {
   const [summary, setSummary] = useState<CaseSummary | null>(initialSummary);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -16,7 +23,7 @@ export default function CaseSummaryView({ initialSummary }: { initialSummary: Ca
     const data = await res.json();
     setLoading(false);
     if (!res.ok) {
-      setError(data.error || "Something went wrong.");
+      setError(data.error || t.somethingWrong);
       return;
     }
     setSummary(data.summary);
@@ -26,12 +33,10 @@ export default function CaseSummaryView({ initialSummary }: { initialSummary: Ca
     <div className="space-y-4">
       <div className="card no-print flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-stone-500">
-          {summary
-            ? `Last updated ${new Date(summary.created_at).toLocaleString()}`
-            : "No summary generated yet."}
+          {summary ? `${t.lastUpdated} ${new Date(summary.created_at).toLocaleString()}` : t.noSummaryYet}
         </p>
         <button className="btn-primary" onClick={regenerate} disabled={loading}>
-          {loading ? "Reviewing records…" : summary ? "Update case summary" : "Generate case summary"}
+          {loading ? t.reviewingRecords : summary ? t.updateCaseSummary : t.generateCaseSummary}
         </button>
       </div>
 
@@ -41,7 +46,7 @@ export default function CaseSummaryView({ initialSummary }: { initialSummary: Ca
         <div className="card">
           <div className="no-print mb-3 flex justify-end">
             <button className="btn-secondary" onClick={() => window.print()}>
-              Print / save as PDF
+              {t.printSavePdf}
             </button>
           </div>
           <Markdown text={summary.content} />
@@ -49,9 +54,7 @@ export default function CaseSummaryView({ initialSummary }: { initialSummary: Ca
       )}
 
       {!summary && !error && (
-        <p className="py-12 text-center text-sm text-stone-400">
-          Generate the first summary once you&apos;ve added some records.
-        </p>
+        <p className="py-12 text-center text-sm text-stone-400">{t.generateFirstSummary}</p>
       )}
     </div>
   );

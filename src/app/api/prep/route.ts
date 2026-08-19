@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getAnthropicClient, ANTHROPIC_MODEL } from "@/lib/anthropic";
 import { formatDocumentsForPrompt } from "@/lib/documents";
 import { formatFamilyNotesForPrompt, getAuthorNames } from "@/lib/familyNotes";
+import { getLang, languageInstruction } from "@/lib/strings";
 import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
@@ -44,9 +45,12 @@ export async function POST(request: Request) {
   }
 
   if (!documents || documents.length === 0) {
+    const lang = await getLang();
     return NextResponse.json({
       report:
-        "No records match these filters yet, so I don't have anything to summarize. Add some documents from the Dashboard first, or widen the date range / condition filters.",
+        lang === "hi"
+          ? "इन फ़िल्टर से अभी कोई रिकॉर्ड मेल नहीं खाता, इसलिए सारांश के लिए कुछ नहीं है। पहले डैशबोर्ड से कुछ दस्तावेज़ जोड़ें, या तारीख़/बीमारी के फ़िल्टर बढ़ाएँ।"
+          : "No records match these filters yet, so I don't have anything to summarize. Add some documents from the Dashboard first, or widen the date range / condition filters.",
     });
   }
 
@@ -58,10 +62,16 @@ export async function POST(request: Request) {
     .order("created_at", { ascending: true });
   if (from) noteQuery = noteQuery.gte("created_at", from);
   if (to) noteQuery = noteQuery.lte("created_at", `${to}T23:59:59`);
-  const [{ data: notes }, authorNames] = await Promise.all([noteQuery, getAuthorNames(supabase)]);
+  const [{ data: notes }, authorNames, lang] = await Promise.all([
+    noteQuery,
+    getAuthorNames(supabase),
+    getLang(),
+  ]);
   const notesText = formatFamilyNotesForPrompt(notes || [], authorNames);
 
   const systemPrompt = `You are helping a family member prepare for an upcoming doctor's appointment for their elderly father, whose case is complex: he has cancer, ulcerative colitis (UC), diabetes, and chronic kidney disease (CKD), all being managed concurrently across multiple specialists.
+
+${languageInstruction(lang)}
 
 You will be given a chronological list of his medical records (bills, prescriptions, test reports, doctor's notes, discharge summaries) with short summaries that a family member typed in — not full lab data — plus a separate log of informal notes family members have left for each other (observations, phone calls with the clinic, things Dad mentioned). Work only from what's given; do not invent lab values, diagnoses, or medication details that aren't present. Treat the family notes as color and context, not clinical fact — they haven't been verified by a doctor.
 

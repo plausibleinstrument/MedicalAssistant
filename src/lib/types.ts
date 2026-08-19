@@ -1,3 +1,5 @@
+import type { Lang } from "@/lib/strings";
+
 export type DocType =
   | "bill"
   | "prescription"
@@ -15,6 +17,19 @@ export const DOC_TYPE_LABELS: Record<DocType, string> = {
   other: "Other",
 };
 
+export const DOC_TYPE_LABELS_HI: Record<DocType, string> = {
+  bill: "बिल",
+  prescription: "नुस्खा",
+  test_report: "जांच रिपोर्ट",
+  doctors_note: "डॉक्टर का नोट",
+  discharge_summary: "डिस्चार्ज सारांश",
+  other: "अन्य",
+};
+
+export function docTypeLabels(lang: Lang): Record<DocType, string> {
+  return lang === "hi" ? DOC_TYPE_LABELS_HI : DOC_TYPE_LABELS;
+}
+
 export type Condition = "cancer" | "uc" | "diabetes" | "ckd" | "general";
 
 export const CONDITION_LABELS: Record<Condition, string> = {
@@ -24,6 +39,18 @@ export const CONDITION_LABELS: Record<Condition, string> = {
   ckd: "CKD (Kidney)",
   general: "General",
 };
+
+export const CONDITION_LABELS_HI: Record<Condition, string> = {
+  cancer: "कैंसर",
+  uc: "अल्सरेटिव कोलाइटिस",
+  diabetes: "डायबिटीज़",
+  ckd: "सीकेडी (किडनी)",
+  general: "सामान्य",
+};
+
+export function conditionLabels(lang: Lang): Record<Condition, string> {
+  return lang === "hi" ? CONDITION_LABELS_HI : CONDITION_LABELS;
+}
 
 export interface DoctorAssistant {
   id: string;

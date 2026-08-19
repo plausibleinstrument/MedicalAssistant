@@ -2,7 +2,8 @@ import Nav from "@/components/Nav";
 import DocumentActions from "@/components/DocumentActions";
 import { createClient } from "@/lib/supabase/server";
 import { redirect, notFound } from "next/navigation";
-import { DOC_TYPE_LABELS, CONDITION_LABELS } from "@/lib/types";
+import { docTypeLabels, conditionLabels } from "@/lib/types";
+import { getStrings, getLang } from "@/lib/strings";
 
 export default async function DocumentDetailPage({ params }: { params: { id: string } }) {
   const supabase = createClient();
@@ -26,6 +27,9 @@ export default async function DocumentDetailPage({ params }: { params: { id: str
 
   if (!doc) notFound();
 
+  const t = await getStrings();
+  const lang = await getLang();
+
   return (
     <div>
       <Nav />
@@ -35,27 +39,27 @@ export default async function DocumentDetailPage({ params }: { params: { id: str
             <div>
               <h1 className="text-lg font-semibold">{doc.title}</h1>
               <p className="text-sm text-stone-500">
-                {DOC_TYPE_LABELS[doc.doc_type as keyof typeof DOC_TYPE_LABELS]} ·{" "}
-                {new Date(doc.document_date).toLocaleDateString()}
+                {docTypeLabels(lang)[doc.doc_type as keyof ReturnType<typeof docTypeLabels>]} ·{" "}
+                {new Date(doc.document_date).toLocaleDateString(lang === "hi" ? "hi-IN" : "en-IN")}
               </p>
             </div>
-            <DocumentActions id={doc.id} />
+            <DocumentActions id={doc.id} t={t} />
           </div>
 
           {doc.doctors?.name && (
             <div>
-              <span className="label">Doctor</span>
+              <span className="label">{t.doctor}</span>
               <p className="text-sm">{doc.doctors.name}</p>
             </div>
           )}
 
           {doc.conditions?.length > 0 && (
             <div>
-              <span className="label">Related conditions</span>
+              <span className="label">{t.relatedConditions}</span>
               <div className="flex gap-2">
                 {doc.conditions.map((c: string) => (
                   <span key={c} className="rounded bg-stone-100 px-2 py-0.5 text-xs">
-                    {CONDITION_LABELS[c as keyof typeof CONDITION_LABELS] || c}
+                    {conditionLabels(lang)[c as keyof ReturnType<typeof conditionLabels>] || c}
                   </span>
                 ))}
               </div>
@@ -64,20 +68,20 @@ export default async function DocumentDetailPage({ params }: { params: { id: str
 
           {doc.amount != null && (
             <div>
-              <span className="label">Amount</span>
+              <span className="label">{t.amount}</span>
               <p className="text-sm">₹{doc.amount}</p>
             </div>
           )}
 
           {doc.summary && (
             <div>
-              <span className="label">Summary</span>
+              <span className="label">{t.summaryField}</span>
               <p className="whitespace-pre-wrap text-sm">{doc.summary}</p>
             </div>
           )}
 
           <div>
-            <span className="label">File</span>
+            <span className="label">{t.fileOnly}</span>
             <p className="text-sm text-stone-500">{doc.file_name}</p>
           </div>
         </div>

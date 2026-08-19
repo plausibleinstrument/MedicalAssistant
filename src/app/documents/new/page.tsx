@@ -2,6 +2,7 @@ import Nav from "@/components/Nav";
 import DocumentForm from "@/components/DocumentForm";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import { getStrings, getLang } from "@/lib/strings";
 
 export default async function NewDocumentPage() {
   const supabase = createClient();
@@ -17,12 +18,15 @@ export default async function NewDocumentPage() {
     .maybeSingle();
   if (!profile) redirect("/invite");
 
+  const t = await getStrings();
+  const lang = await getLang();
+
   return (
     <div>
       <Nav />
       <main className="mx-auto max-w-2xl px-4 py-8">
-        <h1 className="mb-4 text-lg font-semibold">Add a document</h1>
-        <DocumentForm />
+        <h1 className="mb-4 text-lg font-semibold">{t.addDocumentTitle}</h1>
+        <DocumentForm t={t} lang={lang} />
       </main>
     </div>
   );

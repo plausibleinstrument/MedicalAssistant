@@ -1,9 +1,10 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { DOC_TYPE_LABELS, CONDITION_LABELS, Doctor } from "@/lib/types";
+import { docTypeLabels, conditionLabels, Doctor } from "@/lib/types";
+import { Strings, Lang } from "@/lib/strings";
 
-export default function FilterBar({ doctors }: { doctors: Doctor[] }) {
+export default function FilterBar({ doctors, t, lang }: { doctors: Doctor[]; t: Strings; lang: Lang }) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -17,14 +18,14 @@ export default function FilterBar({ doctors }: { doctors: Doctor[] }) {
   return (
     <div className="card mb-4 flex flex-wrap items-end gap-3">
       <div>
-        <label className="label">Type</label>
+        <label className="label">{t.type}</label>
         <select
           className="input"
           defaultValue={searchParams.get("type") || ""}
           onChange={(e) => update("type", e.target.value)}
         >
-          <option value="">All</option>
-          {Object.entries(DOC_TYPE_LABELS).map(([k, v]) => (
+          <option value="">{t.all}</option>
+          {Object.entries(docTypeLabels(lang)).map(([k, v]) => (
             <option key={k} value={k}>
               {v}
             </option>
@@ -33,13 +34,13 @@ export default function FilterBar({ doctors }: { doctors: Doctor[] }) {
       </div>
 
       <div>
-        <label className="label">Doctor</label>
+        <label className="label">{t.doctor}</label>
         <select
           className="input"
           defaultValue={searchParams.get("doctor") || ""}
           onChange={(e) => update("doctor", e.target.value)}
         >
-          <option value="">All</option>
+          <option value="">{t.all}</option>
           {doctors.map((d) => (
             <option key={d.id} value={d.id}>
               {d.name}
@@ -49,14 +50,14 @@ export default function FilterBar({ doctors }: { doctors: Doctor[] }) {
       </div>
 
       <div>
-        <label className="label">Condition</label>
+        <label className="label">{t.condition}</label>
         <select
           className="input"
           defaultValue={searchParams.get("condition") || ""}
           onChange={(e) => update("condition", e.target.value)}
         >
-          <option value="">All</option>
-          {Object.entries(CONDITION_LABELS).map(([k, v]) => (
+          <option value="">{t.all}</option>
+          {Object.entries(conditionLabels(lang)).map(([k, v]) => (
             <option key={k} value={k}>
               {v}
             </option>
@@ -65,7 +66,7 @@ export default function FilterBar({ doctors }: { doctors: Doctor[] }) {
       </div>
 
       <div>
-        <label className="label">From</label>
+        <label className="label">{t.from}</label>
         <input
           type="date"
           className="input"
@@ -75,7 +76,7 @@ export default function FilterBar({ doctors }: { doctors: Doctor[] }) {
       </div>
 
       <div>
-        <label className="label">To</label>
+        <label className="label">{t.to}</label>
         <input
           type="date"
           className="input"
@@ -85,10 +86,10 @@ export default function FilterBar({ doctors }: { doctors: Doctor[] }) {
       </div>
 
       <div className="flex-1 min-w-[180px]">
-        <label className="label">Search</label>
+        <label className="label">{t.search}</label>
         <input
           type="text"
-          placeholder="Title or summary…"
+          placeholder={t.searchPlaceholder}
           className="input"
           defaultValue={searchParams.get("q") || ""}
           onKeyDown={(e) => {
@@ -99,7 +100,7 @@ export default function FilterBar({ doctors }: { doctors: Doctor[] }) {
       </div>
 
       <button className="btn-secondary" onClick={() => router.push("/dashboard")}>
-        Clear
+        {t.clear}
       </button>
     </div>
   );

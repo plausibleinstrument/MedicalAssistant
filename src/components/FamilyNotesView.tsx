@@ -2,15 +2,18 @@
 
 import { useState, useRef, useEffect } from "react";
 import { FamilyNote } from "@/lib/types";
+import { Strings } from "@/lib/strings";
 
 export default function FamilyNotesView({
   initialNotes,
   authorNames,
   currentUserId,
+  t,
 }: {
   initialNotes: FamilyNote[];
   authorNames: Record<string, string>;
   currentUserId: string;
+  t: Strings;
 }) {
   const [notes, setNotes] = useState<FamilyNote[]>(initialNotes);
   const [input, setInput] = useState("");
@@ -23,8 +26,8 @@ export default function FamilyNotesView({
   }, [notes]);
 
   function authorFor(note: FamilyNote) {
-    if (note.created_by === currentUserId) return "You";
-    return (note.created_by && authorNames[note.created_by]) || "Family member";
+    if (note.created_by === currentUserId) return t.you;
+    return (note.created_by && authorNames[note.created_by]) || t.familyMember;
   }
 
   async function send() {
@@ -52,7 +55,7 @@ export default function FamilyNotesView({
     setSending(false);
 
     if (!res.ok) {
-      setError(data.error || "Something went wrong.");
+      setError(data.error || t.somethingWrong);
       setNotes((prev) => prev.filter((n) => n.id !== optimistic.id));
       setInput(text);
       return;
@@ -72,10 +75,7 @@ export default function FamilyNotesView({
     <div className="card flex h-[65vh] flex-col">
       <div className="flex-1 space-y-3 overflow-y-auto pr-1">
         {notes.length === 0 && (
-          <p className="py-12 text-center text-sm text-stone-400">
-            No notes yet — leave one for the rest of the family, or jot down something worth
-            remembering before the next visit.
-          </p>
+          <p className="py-12 text-center text-sm text-stone-400">{t.notesEmptyState}</p>
         )}
         {notes.map((n) => (
           <div key={n.id} className="rounded-lg bg-stone-50 px-3 py-2">
@@ -95,13 +95,13 @@ export default function FamilyNotesView({
         <textarea
           className="input resize-none"
           rows={2}
-          placeholder="Add a note for the family…"
+          placeholder={t.notesPlaceholder}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={onKeyDown}
         />
         <button className="btn-primary self-end" onClick={send} disabled={sending || !input.trim()}>
-          Post
+          {t.post}
         </button>
       </div>
     </div>

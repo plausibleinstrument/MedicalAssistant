@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { DOC_TYPE_LABELS, CONDITION_LABELS, DocumentRecord } from "@/lib/types";
+import { docTypeLabels, conditionLabels, DocumentRecord } from "@/lib/types";
+import { Lang } from "@/lib/strings";
 
 const TYPE_COLORS: Record<string, string> = {
   bill: "bg-amber-100 text-amber-800",
@@ -10,7 +11,11 @@ const TYPE_COLORS: Record<string, string> = {
   other: "bg-stone-100 text-stone-700",
 };
 
-export default function DocumentCard({ doc }: { doc: DocumentRecord }) {
+export default function DocumentCard({ doc, lang }: { doc: DocumentRecord; lang: Lang }) {
+  const docTypes = docTypeLabels(lang);
+  const conditions = conditionLabels(lang);
+  const locale = lang === "hi" ? "hi-IN" : "en-IN";
+
   return (
     <Link href={`/documents/${doc.id}`} className="card block hover:border-brand-300">
       <div className="flex items-start justify-between gap-3">
@@ -19,11 +24,11 @@ export default function DocumentCard({ doc }: { doc: DocumentRecord }) {
             <span
               className={`rounded px-2 py-0.5 text-xs font-medium ${TYPE_COLORS[doc.doc_type]}`}
             >
-              {DOC_TYPE_LABELS[doc.doc_type]}
+              {docTypes[doc.doc_type]}
             </span>
             {doc.conditions?.map((c) => (
               <span key={c} className="rounded bg-stone-100 px-2 py-0.5 text-xs text-stone-600">
-                {CONDITION_LABELS[c as keyof typeof CONDITION_LABELS] || c}
+                {conditions[c] || c}
               </span>
             ))}
           </div>
@@ -33,7 +38,7 @@ export default function DocumentCard({ doc }: { doc: DocumentRecord }) {
           )}
         </div>
         <div className="shrink-0 text-right text-sm text-stone-500">
-          <div>{new Date(doc.document_date).toLocaleDateString()}</div>
+          <div>{new Date(doc.document_date).toLocaleDateString(locale)}</div>
           {doc.doctors?.name && <div className="text-stone-400">{doc.doctors.name}</div>}
           {doc.amount != null && (
             <div className="mt-1 font-medium text-stone-700">₹{doc.amount}</div>

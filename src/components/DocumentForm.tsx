@@ -4,7 +4,8 @@ import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { DOC_TYPE_LABELS, CONDITION_LABELS, DocType, Condition } from "@/lib/types";
+import { docTypeLabels, conditionLabels, DocType, Condition } from "@/lib/types";
+import { Strings, Lang } from "@/lib/strings";
 
 function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -25,6 +26,7 @@ function fileToBase64(file: File): Promise<string> {
 // full quality.
 function resizeImageForExtraction(
   file: File,
+  t: Strings,
   maxDim = 1600,
   quality = 0.85
 ): Promise<{ base64: string; mimeType: string }> {
@@ -44,7 +46,7 @@ function resizeImageForExtraction(
       canvas.height = height;
       const ctx = canvas.getContext("2d");
       if (!ctx) {
-        reject(new Error("Could not process this image."));
+        reject(new Error(t.couldNotProcessImage));
         return;
       }
       ctx.drawImage(img, 0, 0, width, height);
@@ -53,7 +55,7 @@ function resizeImageForExtraction(
     };
     img.onerror = () => {
       URL.revokeObjectURL(url);
-      reject(new Error("Could not read this image."));
+      reject(new Error(t.couldNotReadImage));
     };
     img.src = url;
   });
@@ -61,7 +63,7 @@ function resizeImageForExtraction(
 
 const MAX_PDF_BYTES_FOR_EXTRACT = 3 * 1024 * 1024; // ~3MB raw, safely under the 4.5MB request cap once base64-encoded
 
-export default function DocumentForm() {
+export default function DocumentForm({ t, lang }: { t: Strings; lang: Lang }) {
   const router = useRouter();
   const supabase = createClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -94,20 +96,18 @@ export default function DocumentForm() {
 
       if (f.type === "application/pdf") {
         if (f.size > MAX_PDF_BYTES_FOR_EXTRACT) {
-          throw new Error(
-            "This PDF is too large to auto-fill (over 3MB). Fill the fields in manually, or try a smaller/compressed scan."
-          );
+          throw new Error(t.pdfTooLarge);
         }
         base64 = await fileToBase64(f);
         mimeType = f.type;
       } else {
-        ({ base64, mimeType } = await resizeImageForExtraction(f));
+        ({ base64, mimeType } = await resizeImageForExtraction(f, t));
       }
 
       const res = await fetch("/api/documents/extract", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ base64, mimeType }),
+        body: JSON.stringify({ base64, mimeType, lang }),
       });
 
       const raw = await res.text();
@@ -120,10 +120,7 @@ export default function DocumentForm() {
       }
       if (!res.ok) {
         throw new Error(
-          data.error ||
-            (res.status === 413
-              ? "This file is too large to auto-fill. Try a smaller photo or PDF."
-              : "Auto-classify failed. Fill the fields in manually.")
+          data.error || (res.status === 413 ? t.fileTooLargeGeneric : t.autoClassifyFailed)
         );
       }
       const s = data.suggestion;
@@ -135,7 +132,7 @@ export default function DocumentForm() {
       if (s.summary) setSummary(s.summary);
       if (s.amount != null) setAmount(String(s.amount));
     } catch (e: any) {
-      setError(e.message || "Could not auto-classify this file. Fill the fields in manually.");
+      setError(e.message || t.couldNotAutoClassify);
     } finally {
       setExtracting(false);
     }
@@ -148,13 +145,13 @@ export default function DocumentForm() {
   }
 
   function validate(): string | null {
-    if (!file) return "Choose a file to upload.";
-    if (!title.trim()) return "Title is required.";
-    if (!doctorName.trim()) return "Doctor is required.";
-    if (!date) return "Date is required.";
-    if (conditions.length === 0) return "Select at least one related condition.";
-    if (!summary.trim()) return "Summary is required.";
-    if (docType === "bill" && !amount) return "Amount is required for a bill.";
+    if (!file) return t.chooseFileError;
+    if (!title.trim()) return t.titleRequired;
+    if (!doctorName.trim()) return t.doctorRequired;
+    if (!date) return t.dateRequired;
+    if (conditions.length === 0) return t.conditionRequired;
+    if (!summary.trim()) return t.summaryRequired;
+    if (docType === "bill" && !amount) return t.amountRequiredBill;
     return null;
   }
 
@@ -210,13 +207,13 @@ export default function DocumentForm() {
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Could not save the record.");
+      if (!res.ok) throw new Error(data.error || t.somethingWrong);
 
       setSavedTitle(title);
       resetForm();
       router.refresh();
     } catch (e: any) {
-      setError(e.message || "Something went wrong.");
+      setError(e.message || t.somethingWrong);
     } finally {
       setSaving(false);
     }
@@ -226,21 +223,23 @@ export default function DocumentForm() {
     <form onSubmit={handleSubmit} className="card space-y-4">
       {savedTitle && (
         <div className="flex items-center justify-between rounded-md bg-brand-50 px-3 py-2 text-sm text-brand-700">
-          <span>✓ Saved &quot;{savedTitle}&quot;. Add another below, or</span>
+          <span>
+            ✓ {t.savedPrefix} &quot;{savedTitle}&quot;. {t.addAnotherBelowOr}
+          </span>
           <Link href="/dashboard" className="font-medium underline hover:no-underline">
-            view Records
+            {t.viewRecords}
           </Link>
         </div>
       )}
 
       <div>
-        <label className="label">File (PDF or photo)</label>
+        <label className="label">{t.fileLabel}</label>
         <div className="flex flex-wrap gap-2">
           <button type="button" className="btn-secondary" onClick={() => fileInputRef.current?.click()}>
-            Choose file
+            {t.chooseFile}
           </button>
           <button type="button" className="btn-secondary" onClick={() => cameraInputRef.current?.click()}>
-            📷 Take a photo
+            {t.takePhoto}
           </button>
         </div>
         <input
@@ -258,30 +257,32 @@ export default function DocumentForm() {
           className="hidden"
           onChange={(e) => onFileSelected(e.target.files?.[0] || null)}
         />
-        {file && <p className="mt-2 text-sm text-stone-500">Selected: {file.name}</p>}
-        {extracting && (
-          <p className="mt-1 text-sm text-brand-600">✨ Reading document and auto-filling fields…</p>
+        {file && (
+          <p className="mt-2 text-sm text-stone-500">
+            {t.selectedPrefix} {file.name}
+          </p>
         )}
+        {extracting && <p className="mt-1 text-sm text-brand-600">{t.readingDocument}</p>}
         {file && !extracting && (
           <button type="button" className="btn-secondary mt-2" onClick={() => autoClassify(file)}>
-            ✨ Re-run auto-fill
+            {t.rerunAutofill}
           </button>
         )}
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
-          <label className="label">Title</label>
+          <label className="label">{t.title}</label>
           <input className="input" value={title} onChange={(e) => setTitle(e.target.value)} required />
         </div>
         <div>
-          <label className="label">Type</label>
+          <label className="label">{t.type}</label>
           <select
             className="input"
             value={docType}
             onChange={(e) => setDocType(e.target.value as DocType)}
           >
-            {Object.entries(DOC_TYPE_LABELS).map(([k, v]) => (
+            {Object.entries(docTypeLabels(lang)).map(([k, v]) => (
               <option key={k} value={k}>
                 {v}
               </option>
@@ -289,17 +290,17 @@ export default function DocumentForm() {
           </select>
         </div>
         <div>
-          <label className="label">Doctor</label>
+          <label className="label">{t.doctor}</label>
           <input
             className="input"
-            placeholder="e.g. Dr. Sharma"
+            placeholder={t.doctorPlaceholder}
             value={doctorName}
             onChange={(e) => setDoctorName(e.target.value)}
             required
           />
         </div>
         <div>
-          <label className="label">Date</label>
+          <label className="label">{t.date}</label>
           <input
             type="date"
             className="input"
@@ -309,7 +310,10 @@ export default function DocumentForm() {
           />
         </div>
         <div>
-          <label className="label">Amount{docType === "bill" ? "" : " (if a bill)"}</label>
+          <label className="label">
+            {t.amount}
+            {docType === "bill" ? "" : t.amountIfBill}
+          </label>
           <input
             type="number"
             step="0.01"
@@ -322,9 +326,9 @@ export default function DocumentForm() {
       </div>
 
       <div>
-        <label className="label">Related condition(s) — select at least one</label>
+        <label className="label">{t.conditionsSelectAtLeastOne}</label>
         <div className="flex flex-wrap gap-3">
-          {Object.entries(CONDITION_LABELS).map(([k, v]) => (
+          {Object.entries(conditionLabels(lang)).map(([k, v]) => (
             <label key={k} className="flex items-center gap-1 text-sm">
               <input
                 type="checkbox"
@@ -338,11 +342,11 @@ export default function DocumentForm() {
       </div>
 
       <div>
-        <label className="label">Summary / key values</label>
+        <label className="label">{t.summaryField}</label>
         <textarea
           className="input"
           rows={3}
-          placeholder="e.g. Creatinine 2.1, eGFR 32 — flagged for nephrologist follow-up"
+          placeholder={t.summaryFieldPlaceholder}
           value={summary}
           onChange={(e) => setSummary(e.target.value)}
           required
@@ -352,7 +356,7 @@ export default function DocumentForm() {
       {error && <p className="text-sm text-red-600">{error}</p>}
 
       <button className="btn-primary" disabled={saving}>
-        {saving ? "Saving…" : "Save record"}
+        {saving ? t.saving : t.saveRecord}
       </button>
     </form>
   );

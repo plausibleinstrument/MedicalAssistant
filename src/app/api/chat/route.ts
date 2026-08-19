@@ -1,12 +1,15 @@
 import { createClient } from "@/lib/supabase/server";
 import { getAnthropicClient, ANTHROPIC_MODEL } from "@/lib/anthropic";
 import { formatDocumentsForPrompt } from "@/lib/documents";
+import { getLang, languageInstruction, Lang } from "@/lib/strings";
 import { NextResponse } from "next/server";
 
 const HISTORY_LIMIT = 40;
 
-function systemPrompt(caseSummary: string | null, recordsText: string) {
+function systemPrompt(caseSummary: string | null, recordsText: string, lang: Lang) {
   return `You answer a family's questions about their elderly father's medical case. He has cancer, ulcerative colitis (UC), diabetes, and chronic kidney disease (CKD), managed concurrently across multiple specialists.
+
+${languageInstruction(lang)}
 
 You have two sources, both built from the family's own notes rather than full clinical data — work only from what's given, and say so plainly when the records don't answer a question rather than guessing:
 
@@ -57,16 +60,21 @@ export async function POST(request: Request) {
   const message = (body?.message as string | undefined)?.trim();
   if (!message) return NextResponse.json({ error: "Message is required." }, { status: 400 });
 
-  const [{ data: documents, error: docsError }, { data: caseSummary }, { data: history, error: historyError }] =
-    await Promise.all([
-      supabase.from("documents").select("*, doctors(name, specialty)").order("document_date", { ascending: true }),
-      supabase.from("case_summary").select("content").order("created_at", { ascending: false }).limit(1).maybeSingle(),
-      supabase
-        .from("chat_messages")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(HISTORY_LIMIT),
-    ]);
+  const [
+    { data: documents, error: docsError },
+    { data: caseSummary },
+    { data: history, error: historyError },
+    lang,
+  ] = await Promise.all([
+    supabase.from("documents").select("*, doctors(name, specialty)").order("document_date", { ascending: true }),
+    supabase.from("case_summary").select("content").order("created_at", { ascending: false }).limit(1).maybeSingle(),
+    supabase
+      .from("chat_messages")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(HISTORY_LIMIT),
+    getLang(),
+  ]);
 
   if (docsError) return NextResponse.json({ error: docsError.message }, { status: 500 });
   if (historyError) return NextResponse.json({ error: historyError.message }, { status: 500 });
@@ -95,7 +103,7 @@ export async function POST(request: Request) {
     const response = await client.messages.create({
       model: ANTHROPIC_MODEL,
       max_tokens: 1536,
-      system: systemPrompt(caseSummary?.content || null, recordsText),
+      system: systemPrompt(caseSummary?.content || null, recordsText, lang),
       messages: claudeMessages,
     });
 

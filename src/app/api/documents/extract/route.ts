@@ -21,7 +21,7 @@ export async function POST(request: Request) {
     .maybeSingle();
   if (!profile) return NextResponse.json({ error: "Not authorized." }, { status: 403 });
 
-  const { base64, mimeType } = await request.json();
+  const { base64, mimeType, lang } = await request.json();
   if (!base64 || !mimeType) {
     return NextResponse.json({ error: "Missing file data." }, { status: 400 });
   }
@@ -46,12 +46,12 @@ export async function POST(request: Request) {
 
 Look at the document and respond with ONLY a JSON object (no markdown fences, no other text) with these fields:
 {
-  "title": "short descriptive title, e.g. 'CBC + Kidney Panel'",
-  "doc_type": "one of: bill, prescription, test_report, doctors_note, discharge_summary, other",
-  "doctor_name": "the doctor's name if visible, or null",
+  "title": "short descriptive title, e.g. 'CBC + Kidney Panel'${lang === "hi" ? " — write this in Hindi (Devanagari script)" : ""}",
+  "doc_type": "one of: bill, prescription, test_report, doctors_note, discharge_summary, other — always this exact English value regardless of language",
+  "doctor_name": "the doctor's name if visible, or null — keep the name as written on the document, don't translate it",
   "document_date": "YYYY-MM-DD if visible, or null",
-  "conditions": ["subset of: cancer, uc, diabetes, ckd, general — whichever this document relates to"],
-  "summary": "1-3 sentences on the key content: for test reports, call out any abnormal values by name; for prescriptions, list the medications; for bills, note what it was for",
+  "conditions": ["subset of: cancer, uc, diabetes, ckd, general — whichever this document relates to — always these exact English values regardless of language"],
+  "summary": "1-3 sentences on the key content: for test reports, call out any abnormal values by name; for prescriptions, list the medications; for bills, note what it was for${lang === "hi" ? " — write this in Hindi (Devanagari script)" : ""}",
   "amount": "a number if this is a bill with a total amount, or null"
 }`;
 

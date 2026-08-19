@@ -2,9 +2,13 @@ import { createClient } from "@/lib/supabase/server";
 import { getAnthropicClient, ANTHROPIC_MODEL } from "@/lib/anthropic";
 import { formatDocumentsForPrompt } from "@/lib/documents";
 import { formatFamilyNotesForPrompt, getAuthorNames } from "@/lib/familyNotes";
+import { getLang, languageInstruction, Lang } from "@/lib/strings";
 import { NextResponse } from "next/server";
 
-const SYSTEM_PROMPT = `You maintain a living "state of the case" summary for an elderly father whose case is complex: he has cancer, ulcerative colitis (UC), diabetes, and chronic kidney disease (CKD), all managed concurrently across multiple specialists.
+function systemPrompt(lang: Lang) {
+  return `You maintain a living "state of the case" summary for an elderly father whose case is complex: he has cancer, ulcerative colitis (UC), diabetes, and chronic kidney disease (CKD), all managed concurrently across multiple specialists.
+
+${languageInstruction(lang)}
 
 You will be given the previous version of this summary (if one exists), the full chronological list of his medical records (bills, prescriptions, test reports, doctor's notes, discharge summaries) with short summaries a family member typed in — not full lab data — and a separate log of informal notes family members have left for each other (observations, phone calls with the clinic, things Dad mentioned). Work only from what's given; do not invent lab values, diagnoses, or medication details that aren't present. Treat the family notes as color and context, not clinical fact — they haven't been verified by a doctor, so keep them clearly distinct from the formal record.
 
@@ -20,6 +24,7 @@ Structure your response with markdown headers:
 7. A short closing line: this is an organizing summary built from the family's own notes, not a diagnosis — doctors make the clinical calls.
 
 Keep it concise and scannable.`;
+}
 
 export async function GET() {
   const supabase = createClient();
@@ -69,8 +74,14 @@ export async function POST() {
   }
 
   if (!documents || documents.length === 0) {
+    const lang = await getLang();
     return NextResponse.json(
-      { error: "No records yet to summarize. Add some documents from the Dashboard first." },
+      {
+        error:
+          lang === "hi"
+            ? "सारांश बनाने के लिए अभी कोई रिकॉर्ड नहीं है। पहले डैशबोर्ड से कुछ दस्तावेज़ जोड़ें।"
+            : "No records yet to summarize. Add some documents from the Dashboard first.",
+      },
       { status: 400 }
     );
   }
@@ -82,9 +93,10 @@ export async function POST() {
     .limit(1)
     .maybeSingle();
 
-  const [{ data: notes }, authorNames] = await Promise.all([
+  const [{ data: notes }, authorNames, lang] = await Promise.all([
     supabase.from("family_notes").select("*").order("created_at", { ascending: true }),
     getAuthorNames(supabase),
+    getLang(),
   ]);
 
   const userPrompt = `${
@@ -98,7 +110,7 @@ export async function POST() {
     const response = await client.messages.create({
       model: ANTHROPIC_MODEL,
       max_tokens: 2048,
-      system: SYSTEM_PROMPT,
+      system: systemPrompt(lang),
       messages: [{ role: "user", content: userPrompt }],
     });
 

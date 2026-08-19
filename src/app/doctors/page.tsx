@@ -4,6 +4,7 @@ import AssistantManager from "@/components/AssistantManager";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { Doctor } from "@/lib/types";
+import { getStrings } from "@/lib/strings";
 
 export default async function DoctorsPage() {
   const supabase = createClient();
@@ -23,15 +24,16 @@ export default async function DoctorsPage() {
     .from("doctors")
     .select("*, doctor_assistants(*)")
     .order("name");
+  const t = await getStrings();
 
   return (
     <div>
       <Nav />
       <main className="mx-auto max-w-2xl space-y-4 px-4 py-8">
         <div className="flex items-center justify-between">
-          <h1 className="text-lg font-semibold">Doctors</h1>
+          <h1 className="text-lg font-semibold">{t.doctors}</h1>
         </div>
-        <DoctorForm />
+        <DoctorForm t={t} />
         <div className="space-y-2">
           {(doctors as Doctor[] | null)?.map((d) => (
             <div key={d.id} className="card">
@@ -40,11 +42,11 @@ export default async function DoctorsPage() {
                 {[d.specialty, d.hospital_or_clinic].filter(Boolean).join(" · ")}
               </p>
               {d.phone && <p className="text-sm text-stone-400">{d.phone}</p>}
-              <AssistantManager doctorId={d.id} assistants={d.doctor_assistants || []} />
+              <AssistantManager doctorId={d.id} assistants={d.doctor_assistants || []} t={t} />
             </div>
           ))}
           {doctors && doctors.length === 0 && (
-            <p className="py-8 text-center text-sm text-stone-400">No doctors added yet.</p>
+            <p className="py-8 text-center text-sm text-stone-400">{t.noDoctorsYet}</p>
           )}
         </div>
       </main>

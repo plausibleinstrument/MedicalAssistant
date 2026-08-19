@@ -3,6 +3,7 @@ import ChatView from "@/components/ChatView";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { ChatMessage } from "@/lib/types";
+import { getStrings } from "@/lib/strings";
 
 export default async function AskPage() {
   const supabase = createClient();
@@ -22,17 +23,15 @@ export default async function AskPage() {
     .from("chat_messages")
     .select("*")
     .order("created_at", { ascending: true });
+  const t = await getStrings();
 
   return (
     <div>
       <Nav />
       <main className="mx-auto max-w-3xl px-4 py-8">
-        <h1 className="mb-1 text-lg font-semibold">Ask about Dad&apos;s case</h1>
-        <p className="mb-4 text-sm text-stone-500">
-          A shared thread the whole family can use — ask anything about his records, and Claude
-          answers from the case summary and everything on file. Not medical advice.
-        </p>
-        <ChatView initialMessages={(messages as ChatMessage[]) || []} currentUserId={user.id} />
+        <h1 className="mb-1 text-lg font-semibold">{t.askTitle}</h1>
+        <p className="mb-4 text-sm text-stone-500">{t.askDescription}</p>
+        <ChatView initialMessages={(messages as ChatMessage[]) || []} currentUserId={user.id} t={t} />
       </main>
     </div>
   );

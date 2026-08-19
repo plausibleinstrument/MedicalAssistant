@@ -3,13 +3,16 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { DoctorAssistant } from "@/lib/types";
+import { Strings } from "@/lib/strings";
 
 export default function AssistantManager({
   doctorId,
   assistants,
+  t,
 }: {
   doctorId: string;
   assistants: DoctorAssistant[];
+  t: Strings;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -30,7 +33,7 @@ export default function AssistantManager({
     const data = await res.json();
     setSaving(false);
     if (!res.ok) {
-      setError(data.error || "Could not save assistant.");
+      setError(data.error || t.couldNotSaveAssistant);
       return;
     }
     setName("");
@@ -40,10 +43,10 @@ export default function AssistantManager({
   }
 
   async function remove(id: string) {
-    if (!confirm("Remove this assistant?")) return;
+    if (!confirm(t.confirmRemoveAssistant)) return;
     const res = await fetch(`/api/doctor-assistants/${id}`, { method: "DELETE" });
     if (res.ok) router.refresh();
-    else alert("Could not remove this assistant.");
+    else alert(t.couldNotRemoveAssistant);
   }
 
   return (
@@ -53,7 +56,7 @@ export default function AssistantManager({
           {assistants.map((a) => (
             <li key={a.id} className="flex items-center justify-between text-sm text-stone-500">
               <span>
-                Assistant: {a.name}
+                {t.assistantPrefix}: {a.name}
                 {a.phone ? ` · ${a.phone}` : ""}
               </span>
               <button
@@ -61,7 +64,7 @@ export default function AssistantManager({
                 className="text-xs text-red-500 hover:underline"
                 onClick={() => remove(a.id)}
               >
-                Remove
+                {t.remove}
               </button>
             </li>
           ))}
@@ -71,18 +74,18 @@ export default function AssistantManager({
       {open ? (
         <form onSubmit={add} className="mt-2 flex flex-wrap items-end gap-2">
           <div>
-            <label className="label">Assistant name</label>
+            <label className="label">{t.assistantNamePlaceholder}</label>
             <input className="input" value={name} onChange={(e) => setName(e.target.value)} required />
           </div>
           <div>
-            <label className="label">Phone</label>
+            <label className="label">{t.phone}</label>
             <input className="input" value={phone} onChange={(e) => setPhone(e.target.value)} />
           </div>
           <button className="btn-primary" disabled={saving}>
-            {saving ? "Saving…" : "Save"}
+            {saving ? t.saving : t.save}
           </button>
           <button type="button" className="btn-secondary" onClick={() => setOpen(false)}>
-            Cancel
+            {t.cancel}
           </button>
         </form>
       ) : (
@@ -91,7 +94,7 @@ export default function AssistantManager({
           className="mt-1 text-xs text-brand-700 hover:underline"
           onClick={() => setOpen(true)}
         >
-          + Add assistant
+          {t.addAssistant}
         </button>
       )}
       {error && <p className="mt-1 text-xs text-red-600">{error}</p>}

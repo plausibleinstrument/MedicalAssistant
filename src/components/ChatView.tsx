@@ -2,14 +2,17 @@
 
 import { useState, useRef, useEffect } from "react";
 import { ChatMessage } from "@/lib/types";
+import { Strings } from "@/lib/strings";
 import Markdown from "./Markdown";
 
 export default function ChatView({
   initialMessages,
   currentUserId,
+  t,
 }: {
   initialMessages: ChatMessage[];
   currentUserId: string;
+  t: Strings;
 }) {
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
   const [input, setInput] = useState("");
@@ -47,7 +50,7 @@ export default function ChatView({
     setLoading(false);
 
     if (!res.ok) {
-      setError(data.error || "Something went wrong.");
+      setError(data.error || t.somethingWrong);
       if (data.userMessage) {
         setMessages((prev) => [
           ...prev.filter((m) => m.id !== optimistic.id),
@@ -75,10 +78,7 @@ export default function ChatView({
     <div className="card flex h-[65vh] flex-col">
       <div className="flex-1 space-y-4 overflow-y-auto pr-1">
         {messages.length === 0 && (
-          <p className="py-12 text-center text-sm text-stone-400">
-            Ask something like &quot;What did the last oncology visit say?&quot; or &quot;Any
-            medications that show up across multiple doctors?&quot;
-          </p>
+          <p className="py-12 text-center text-sm text-stone-400">{t.askEmptyState}</p>
         )}
         {messages.map((m) => (
           <div key={m.id} className={m.role === "user" ? "text-right" : "text-left"}>
@@ -93,7 +93,7 @@ export default function ChatView({
             </div>
           </div>
         ))}
-        {loading && <p className="text-sm text-stone-400">Thinking…</p>}
+        {loading && <p className="text-sm text-stone-400">{t.thinking}</p>}
         <div ref={bottomRef} />
       </div>
 
@@ -103,13 +103,13 @@ export default function ChatView({
         <textarea
           className="input resize-none"
           rows={2}
-          placeholder="Ask a question…"
+          placeholder={t.askPlaceholder}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={onKeyDown}
         />
         <button className="btn-primary self-end" onClick={send} disabled={loading || !input.trim()}>
-          Send
+          {t.send}
         </button>
       </div>
     </div>

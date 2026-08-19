@@ -2,13 +2,14 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Strings } from "@/lib/strings";
 
 interface AssistantRow {
   name: string;
   phone: string;
 }
 
-export default function DoctorForm() {
+export default function DoctorForm({ t }: { t: Strings }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
@@ -45,7 +46,7 @@ export default function DoctorForm() {
     const data = await res.json();
     setSaving(false);
     if (!res.ok) {
-      setError(data.error || "Could not save doctor.");
+      setError(data.error || t.couldNotSaveDoctor);
       return;
     }
     setName("");
@@ -60,7 +61,7 @@ export default function DoctorForm() {
   if (!open) {
     return (
       <button className="btn-primary" onClick={() => setOpen(true)}>
-        + Add doctor
+        {t.addDoctor}
       </button>
     );
   }
@@ -69,37 +70,37 @@ export default function DoctorForm() {
     <form onSubmit={submit} className="card space-y-3">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div>
-          <label className="label">Name</label>
+          <label className="label">{t.name}</label>
           <input className="input" value={name} onChange={(e) => setName(e.target.value)} required />
         </div>
         <div>
-          <label className="label">Specialty</label>
+          <label className="label">{t.specialty}</label>
           <input className="input" value={specialty} onChange={(e) => setSpecialty(e.target.value)} />
         </div>
         <div>
-          <label className="label">Hospital / clinic</label>
+          <label className="label">{t.hospitalClinic}</label>
           <input className="input" value={hospital} onChange={(e) => setHospital(e.target.value)} />
         </div>
         <div>
-          <label className="label">Phone</label>
+          <label className="label">{t.phone}</label>
           <input className="input" value={phone} onChange={(e) => setPhone(e.target.value)} />
         </div>
       </div>
 
       <div>
-        <label className="label">Assistant(s) — optional, add as many as needed</label>
+        <label className="label">{t.assistantsLabel}</label>
         <div className="space-y-2">
           {assistants.map((a, i) => (
             <div key={i} className="flex flex-wrap items-center gap-2">
               <input
                 className="input flex-1"
-                placeholder="Assistant name"
+                placeholder={t.assistantNamePlaceholder}
                 value={a.name}
                 onChange={(e) => updateAssistant(i, "name", e.target.value)}
               />
               <input
                 className="input flex-1"
-                placeholder="Phone"
+                placeholder={t.phone}
                 value={a.phone}
                 onChange={(e) => updateAssistant(i, "phone", e.target.value)}
               />
@@ -108,7 +109,7 @@ export default function DoctorForm() {
                 className="text-sm text-red-500 hover:underline"
                 onClick={() => removeAssistant(i)}
               >
-                Remove
+                {t.remove}
               </button>
             </div>
           ))}
@@ -118,17 +119,17 @@ export default function DoctorForm() {
           className="mt-2 text-sm text-brand-700 hover:underline"
           onClick={() => setAssistants((prev) => [...prev, { name: "", phone: "" }])}
         >
-          + Add assistant
+          {t.addAssistant}
         </button>
       </div>
 
       {error && <p className="text-sm text-red-600">{error}</p>}
       <div className="flex gap-2">
         <button className="btn-primary" disabled={saving}>
-          {saving ? "Saving…" : "Save"}
+          {saving ? t.saving : t.save}
         </button>
         <button type="button" className="btn-secondary" onClick={() => setOpen(false)}>
-          Cancel
+          {t.cancel}
         </button>
       </div>
     </form>

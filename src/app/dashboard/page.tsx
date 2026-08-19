@@ -7,10 +7,10 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import {
-  CONDITION_LABELS,
+  conditionLabels,
   Condition,
   DocType,
-  DOC_TYPE_LABELS,
+  docTypeLabels,
   DocumentRecord,
   HomePhoto,
 } from "@/lib/types";
@@ -61,12 +61,11 @@ export default async function DashboardPage({
   const tiles: CareTile[] = TODAY_CONDITIONS.map((c) => {
     const doc = recentByCondition?.find((d) => d.conditions?.includes(c));
     const next = doc
-      ? `${DOC_TYPE_LABELS[doc.doc_type as DocType]} · ${new Date(doc.document_date).toLocaleDateString(
-          lang === "hi" ? "hi-IN" : "en-IN",
-          { day: "numeric", month: "short" }
-        )}`
+      ? `${docTypeLabels(lang)[doc.doc_type as DocType]} · ${new Date(
+          doc.document_date
+        ).toLocaleDateString(lang === "hi" ? "hi-IN" : "en-IN", { day: "numeric", month: "short" })}`
       : "";
-    return { label: CONDITION_LABELS[c], next };
+    return { label: conditionLabels(lang)[c], next };
   });
 
   const dateLine = `${new Date().toLocaleDateString(lang === "hi" ? "hi-IN" : "en-IN", {
@@ -122,7 +121,7 @@ export default async function DashboardPage({
           photos={displayPhotos}
         />
 
-        <HomePhotosManager photos={(homePhotos as HomePhoto[]) || []} />
+        <HomePhotosManager photos={(homePhotos as HomePhoto[]) || []} t={t} />
 
         <div className="mb-4 flex items-center justify-between">
           <h1 className="text-lg font-semibold">{t.records}</h1>
@@ -131,20 +130,20 @@ export default async function DashboardPage({
           </Link>
         </div>
 
-        <FilterBar doctors={doctors || []} />
+        <FilterBar doctors={doctors || []} t={t} lang={lang} />
 
         {error && (
-          <p className="text-sm text-red-600">Could not load records: {error.message}</p>
+          <p className="text-sm text-red-600">
+            {t.couldNotLoadRecords} {error.message}
+          </p>
         )}
 
         <div className="space-y-3">
           {(documents as DocumentRecord[] | null)?.map((doc) => (
-            <DocumentCard key={doc.id} doc={doc} />
+            <DocumentCard key={doc.id} doc={doc} lang={lang} />
           ))}
           {documents && documents.length === 0 && (
-            <p className="py-12 text-center text-sm text-stone-400">
-              No records match these filters yet.
-            </p>
+            <p className="py-12 text-center text-sm text-stone-400">{t.noRecordsMatch}</p>
           )}
         </div>
       </main>

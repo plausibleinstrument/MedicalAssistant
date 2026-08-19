@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { DOC_TYPE_LABELS, CONDITION_LABELS, DocType, Condition } from "@/lib/types";
 
@@ -70,6 +71,7 @@ export default function DocumentForm() {
   const [extracting, setExtracting] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [savedTitle, setSavedTitle] = useState<string | null>(null);
 
   const [title, setTitle] = useState("");
   const [docType, setDocType] = useState<DocType>("test_report");
@@ -141,6 +143,7 @@ export default function DocumentForm() {
 
   function onFileSelected(f: File | null) {
     setFile(f);
+    setSavedTitle(null);
     if (f) autoClassify(f);
   }
 
@@ -155,6 +158,19 @@ export default function DocumentForm() {
     return null;
   }
 
+  function resetForm() {
+    setFile(null);
+    setTitle("");
+    setDocType("test_report");
+    setDoctorName("");
+    setDate("");
+    setConditions([]);
+    setSummary("");
+    setAmount("");
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    if (cameraInputRef.current) cameraInputRef.current.value = "";
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const validationError = validate();
@@ -164,6 +180,7 @@ export default function DocumentForm() {
     }
     setSaving(true);
     setError(null);
+    setSavedTitle(null);
 
     const selectedFile = file as File;
 
@@ -195,7 +212,8 @@ export default function DocumentForm() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Could not save the record.");
 
-      router.push("/dashboard");
+      setSavedTitle(title);
+      resetForm();
       router.refresh();
     } catch (e: any) {
       setError(e.message || "Something went wrong.");
@@ -206,6 +224,15 @@ export default function DocumentForm() {
 
   return (
     <form onSubmit={handleSubmit} className="card space-y-4">
+      {savedTitle && (
+        <div className="flex items-center justify-between rounded-md bg-brand-50 px-3 py-2 text-sm text-brand-700">
+          <span>✓ Saved &quot;{savedTitle}&quot;. Add another below, or</span>
+          <Link href="/dashboard" className="font-medium underline hover:no-underline">
+            view Records
+          </Link>
+        </div>
+      )}
+
       <div>
         <label className="label">File (PDF or photo)</label>
         <div className="flex flex-wrap gap-2">

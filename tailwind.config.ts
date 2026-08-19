@@ -16,6 +16,9 @@ const config: Config = {
           700: "#1c4639",
         },
       },
+      fontFamily: {
+        sans: ["var(--font-sans)", "var(--font-deva)", "sans-serif"],
+      },
     },
   },
   plugins: [],

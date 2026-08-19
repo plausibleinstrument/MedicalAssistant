@@ -1,10 +1,23 @@
 import Nav from "@/components/Nav";
 import FilterBar from "@/components/FilterBar";
 import DocumentCard from "@/components/DocumentCard";
+import TodayPanel, { CareTile } from "@/components/TodayPanel";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { DocumentRecord } from "@/lib/types";
+import { CONDITION_LABELS, Condition, DocType, DOC_TYPE_LABELS, DocumentRecord } from "@/lib/types";
+import { getStrings, getLang } from "@/lib/strings";
+
+const TODAY_CONDITIONS: Condition[] = ["cancer", "uc", "diabetes", "ckd"];
+
+function greetingFor(t: Awaited<ReturnType<typeof getStrings>>) {
+  const hour = Number(
+    new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata", hour: "numeric", hour12: false })
+  );
+  if (hour < 12) return t.greetingMorning;
+  if (hour < 17) return t.greetingAfternoon;
+  return t.greetingEvening;
+}
 
 export default async function DashboardPage({
   searchParams,
@@ -25,6 +38,33 @@ export default async function DashboardPage({
   if (!profile) redirect("/invite");
 
   const { data: doctors } = await supabase.from("doctors").select("*").order("name");
+
+  const t = await getStrings();
+  const lang = await getLang();
+
+  const { data: recentByCondition } = await supabase
+    .from("documents")
+    .select("document_date, doc_type, conditions")
+    .overlaps("conditions", TODAY_CONDITIONS)
+    .order("document_date", { ascending: false });
+
+  const tiles: CareTile[] = TODAY_CONDITIONS.map((c) => {
+    const doc = recentByCondition?.find((d) => d.conditions?.includes(c));
+    const next = doc
+      ? `${DOC_TYPE_LABELS[doc.doc_type as DocType]} · ${new Date(doc.document_date).toLocaleDateString(
+          lang === "hi" ? "hi-IN" : "en-IN",
+          { day: "numeric", month: "short" }
+        )}`
+      : "";
+    return { label: CONDITION_LABELS[c], next };
+  });
+
+  const dateLine = `${new Date().toLocaleDateString(lang === "hi" ? "hi-IN" : "en-IN", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    timeZone: "Asia/Kolkata",
+  })} · ${TODAY_CONDITIONS.length} ${t.conditionsManaged}`;
 
   let query = supabase
     .from("documents")
@@ -47,10 +87,19 @@ export default async function DashboardPage({
     <div>
       <Nav />
       <main className="mx-auto max-w-5xl px-4 py-8">
+        <TodayPanel
+          t={t}
+          lang={lang}
+          greeting={greetingFor(t)}
+          dateLine={dateLine}
+          tiles={tiles}
+          photos={[]}
+        />
+
         <div className="mb-4 flex items-center justify-between">
-          <h1 className="text-lg font-semibold">Records</h1>
+          <h1 className="text-lg font-semibold">{t.records}</h1>
           <Link href="/documents/new" className="btn-primary">
-            + Add document
+            + {t.add}
           </Link>
         </div>
 

@@ -184,6 +184,50 @@ create policy "family members delete from documents bucket"
   using (bucket_id = 'medical-documents' and is_family_member(auth.uid()));
 
 -- ============================================================
+-- 5b. home_photos + a second private bucket: casual family photos
+--     shown in the dashboard's "window from home" panel. Kept
+--     separate from medical-documents (different content, same
+--     private/signed-URL protection) so it's easy to reason about
+--     what's in each bucket.
+-- ============================================================
+create table if not exists home_photos (
+  id uuid primary key default gen_random_uuid(),
+  file_path text not null,
+  file_name text not null,
+  uploaded_by uuid references auth.users (id),
+  created_at timestamptz not null default now()
+);
+
+alter table home_photos enable row level security;
+
+drop policy if exists "family members full access to home photos" on home_photos;
+create policy "family members full access to home photos"
+  on home_photos for all
+  using (is_family_member(auth.uid()))
+  with check (is_family_member(auth.uid()));
+
+create index if not exists home_photos_created_idx on home_photos (created_at desc);
+
+insert into storage.buckets (id, name, public)
+values ('home-photos', 'home-photos', false)
+on conflict (id) do nothing;
+
+drop policy if exists "family members read home photos bucket" on storage.objects;
+create policy "family members read home photos bucket"
+  on storage.objects for select
+  using (bucket_id = 'home-photos' and is_family_member(auth.uid()));
+
+drop policy if exists "family members upload to home photos bucket" on storage.objects;
+create policy "family members upload to home photos bucket"
+  on storage.objects for insert
+  with check (bucket_id = 'home-photos' and is_family_member(auth.uid()));
+
+drop policy if exists "family members delete from home photos bucket" on storage.objects;
+create policy "family members delete from home photos bucket"
+  on storage.objects for delete
+  using (bucket_id = 'home-photos' and is_family_member(auth.uid()));
+
+-- ============================================================
 -- 6. case_summary: an append-only log of AI-maintained "state of
 --    Dad's case" summaries. Each regeneration inserts a new row
 --    (from the "Update case summary" button); the app always reads

@@ -90,3 +90,11 @@ export interface FamilyNote {
   created_by: string | null;
   created_at: string;
 }
+
+export interface HomePhoto {
+  id: string;
+  file_path: string;
+  file_name: string;
+  uploaded_by: string | null;
+  created_at: string;
+}

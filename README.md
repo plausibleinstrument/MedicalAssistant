@@ -129,6 +129,10 @@ Finally, go back to Supabase **Authentication → URL Configuration** and update
   observations like "Dad mentioned his knee hurts" or "called the clinic, they said…". Claude reads
   this log too: Prep for Visit and the Case Summary both factor in relevant notes, kept clearly
   labeled as family-reported rather than clinical fact.
+- **Home photos** — the Dashboard's "Today" panel has a quiet photo corner for family photos (home,
+  grandchildren, whatever). Click "Manage home photos" to upload or remove them; the newest four
+  show in the panel. Stored in a private bucket behind signed URLs, same protection as medical
+  documents — not public files, only visible to signed-in family members.
 - **Settings** — generate invite codes (owner only), see who has access.
 
 ## Troubleshooting

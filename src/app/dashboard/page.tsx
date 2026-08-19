@@ -2,11 +2,21 @@ import Nav from "@/components/Nav";
 import FilterBar from "@/components/FilterBar";
 import DocumentCard from "@/components/DocumentCard";
 import TodayPanel, { CareTile } from "@/components/TodayPanel";
+import HomePhotosManager from "@/components/HomePhotosManager";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { CONDITION_LABELS, Condition, DocType, DOC_TYPE_LABELS, DocumentRecord } from "@/lib/types";
+import {
+  CONDITION_LABELS,
+  Condition,
+  DocType,
+  DOC_TYPE_LABELS,
+  DocumentRecord,
+  HomePhoto,
+} from "@/lib/types";
 import { getStrings, getLang } from "@/lib/strings";
+
+const HOME_PHOTOS_SHOWN = 4;
 
 const TODAY_CONDITIONS: Condition[] = ["cancer", "uc", "diabetes", "ckd"];
 
@@ -66,6 +76,22 @@ export default async function DashboardPage({
     timeZone: "Asia/Kolkata",
   })} · ${TODAY_CONDITIONS.length} ${t.conditionsManaged}`;
 
+  const { data: homePhotos } = await supabase
+    .from("home_photos")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  const displayPhotos = (
+    await Promise.all(
+      (homePhotos || []).slice(0, HOME_PHOTOS_SHOWN).map(async (p) => {
+        const { data: signed } = await supabase.storage
+          .from("home-photos")
+          .createSignedUrl(p.file_path, 3600);
+        return signed?.signedUrl ? { src: signed.signedUrl, alt: p.file_name } : null;
+      })
+    )
+  ).filter((p): p is { src: string; alt: string } => p !== null);
+
   let query = supabase
     .from("documents")
     .select("*, doctors(*)")
@@ -93,8 +119,10 @@ export default async function DashboardPage({
           greeting={greetingFor(t)}
           dateLine={dateLine}
           tiles={tiles}
-          photos={[]}
+          photos={displayPhotos}
         />
+
+        <HomePhotosManager photos={(homePhotos as HomePhoto[]) || []} />
 
         <div className="mb-4 flex items-center justify-between">
           <h1 className="text-lg font-semibold">{t.records}</h1>

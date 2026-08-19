@@ -18,10 +18,30 @@ create table if not exists profiles (
 
 alter table profiles enable row level security;
 
+-- Every "is this user a family member" RLS check below goes through this
+-- function rather than inlining `auth.uid() in (select id from profiles)`.
+-- That inline form is fine on OTHER tables, but profiles' own SELECT policy
+-- can't query profiles from inside itself without SECURITY DEFINER — RLS
+-- re-applies the calling policy to the subquery, which can make the check
+-- fail to see a row that's actually there (looks like "no profile" in the
+-- app, bouncing a real family member to the /invite screen). A
+-- SECURITY DEFINER function sidesteps that recursion, so it's used
+-- everywhere for consistency even though only the profiles policy strictly
+-- needs it.
+create or replace function public.is_family_member(uid uuid)
+returns boolean
+language sql
+security definer
+stable
+set search_path = public
+as $$
+  select exists (select 1 from profiles where id = uid);
+$$;
+
 drop policy if exists "profiles are visible to family members" on profiles;
 create policy "profiles are visible to family members"
   on profiles for select
-  using (auth.uid() in (select id from profiles));
+  using (is_family_member(auth.uid()));
 
 drop policy if exists "users can insert their own profile" on profiles;
 create policy "users can insert their own profile"
@@ -47,12 +67,12 @@ alter table invite_codes enable row level security;
 drop policy if exists "family members manage invite codes" on invite_codes;
 create policy "family members manage invite codes"
   on invite_codes for select
-  using (auth.uid() in (select id from profiles));
+  using (is_family_member(auth.uid()));
 
 drop policy if exists "family members create invite codes" on invite_codes;
 create policy "family members create invite codes"
   on invite_codes for insert
-  with check (auth.uid() in (select id from profiles));
+  with check (is_family_member(auth.uid()));
 
 -- Redemption (the update that increments `uses`) happens through the
 -- /api/invite/redeem server route using the service role key, which
@@ -78,8 +98,8 @@ alter table doctors enable row level security;
 drop policy if exists "family members full access to doctors" on doctors;
 create policy "family members full access to doctors"
   on doctors for all
-  using (auth.uid() in (select id from profiles))
-  with check (auth.uid() in (select id from profiles));
+  using (is_family_member(auth.uid()))
+  with check (is_family_member(auth.uid()));
 
 -- ============================================================
 -- 3b. doctor_assistants: a doctor can have more than one — each
@@ -98,8 +118,8 @@ alter table doctor_assistants enable row level security;
 drop policy if exists "family members full access to doctor assistants" on doctor_assistants;
 create policy "family members full access to doctor assistants"
   on doctor_assistants for all
-  using (auth.uid() in (select id from profiles))
-  with check (auth.uid() in (select id from profiles));
+  using (is_family_member(auth.uid()))
+  with check (is_family_member(auth.uid()));
 
 create index if not exists doctor_assistants_doctor_idx on doctor_assistants (doctor_id);
 
@@ -130,8 +150,8 @@ alter table documents enable row level security;
 drop policy if exists "family members full access to documents" on documents;
 create policy "family members full access to documents"
   on documents for all
-  using (auth.uid() in (select id from profiles))
-  with check (auth.uid() in (select id from profiles));
+  using (is_family_member(auth.uid()))
+  with check (is_family_member(auth.uid()));
 
 create index if not exists documents_date_idx on documents (document_date desc);
 create index if not exists documents_type_idx on documents (doc_type);
@@ -151,17 +171,17 @@ on conflict (id) do nothing;
 drop policy if exists "family members read documents bucket" on storage.objects;
 create policy "family members read documents bucket"
   on storage.objects for select
-  using (bucket_id = 'medical-documents' and auth.uid() in (select id from profiles));
+  using (bucket_id = 'medical-documents' and is_family_member(auth.uid()));
 
 drop policy if exists "family members upload to documents bucket" on storage.objects;
 create policy "family members upload to documents bucket"
   on storage.objects for insert
-  with check (bucket_id = 'medical-documents' and auth.uid() in (select id from profiles));
+  with check (bucket_id = 'medical-documents' and is_family_member(auth.uid()));
 
 drop policy if exists "family members delete from documents bucket" on storage.objects;
 create policy "family members delete from documents bucket"
   on storage.objects for delete
-  using (bucket_id = 'medical-documents' and auth.uid() in (select id from profiles));
+  using (bucket_id = 'medical-documents' and is_family_member(auth.uid()));
 
 -- ============================================================
 -- 6. case_summary: an append-only log of AI-maintained "state of
@@ -183,12 +203,12 @@ alter table case_summary enable row level security;
 drop policy if exists "family members read case summary" on case_summary;
 create policy "family members read case summary"
   on case_summary for select
-  using (auth.uid() in (select id from profiles));
+  using (is_family_member(auth.uid()));
 
 drop policy if exists "family members write case summary" on case_summary;
 create policy "family members write case summary"
   on case_summary for insert
-  with check (auth.uid() in (select id from profiles));
+  with check (is_family_member(auth.uid()));
 
 create index if not exists case_summary_created_idx on case_summary (created_at desc);
 
@@ -210,12 +230,12 @@ alter table chat_messages enable row level security;
 drop policy if exists "family members read chat messages" on chat_messages;
 create policy "family members read chat messages"
   on chat_messages for select
-  using (auth.uid() in (select id from profiles));
+  using (is_family_member(auth.uid()));
 
 drop policy if exists "family members write chat messages" on chat_messages;
 create policy "family members write chat messages"
   on chat_messages for insert
-  with check (auth.uid() in (select id from profiles));
+  with check (is_family_member(auth.uid()));
 
 create index if not exists chat_messages_created_idx on chat_messages (created_at asc);
 

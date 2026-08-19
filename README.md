@@ -127,6 +127,16 @@ Finally, go back to Supabase **Authentication → URL Configuration** and update
   family sees and can add to the same thread.
 - **Settings** — generate invite codes (owner only), see who has access.
 
+## Troubleshooting
+
+- **Signed in but keep getting bounced to the "enter your invite code" screen, even though
+  `select * from profiles;` shows your row.** This is a Postgres RLS gotcha, not missing data: the
+  `profiles` table's own row-visibility policy used to check `auth.uid() in (select id from
+  profiles)` — querying `profiles` from inside its own policy, which can fail to see a row that's
+  actually there. `supabase/schema.sql` fixes this with a `security definer` helper function
+  (`is_family_member`) that every policy goes through instead. If you're on an older copy of the
+  schema, re-run the current `supabase/schema.sql` and this stops happening for good.
+
 ## Known limitations / good next steps
 
 - **Prep quality depends on what's in the "Summary" field.** The app doesn't yet OCR full lab

@@ -1,0 +1,40 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+
+export default function DocumentActions({ id }: { id: string }) {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+
+  async function viewFile() {
+    setLoading(true);
+    const res = await fetch(`/api/documents/${id}/signed-url`);
+    const data = await res.json();
+    setLoading(false);
+    if (res.ok) window.open(data.url, "_blank");
+    else alert(data.error || "Could not open file.");
+  }
+
+  async function deleteDoc() {
+    if (!confirm("Delete this record? This cannot be undone.")) return;
+    const res = await fetch(`/api/documents/${id}`, { method: "DELETE" });
+    if (res.ok) {
+      router.push("/dashboard");
+      router.refresh();
+    } else {
+      alert("Could not delete this record.");
+    }
+  }
+
+  return (
+    <div className="flex gap-2">
+      <button className="btn-primary" onClick={viewFile} disabled={loading}>
+        {loading ? "Opening…" : "View file"}
+      </button>
+      <button className="btn-secondary text-red-600" onClick={deleteDoc}>
+        Delete
+      </button>
+    </div>
+  );
+}

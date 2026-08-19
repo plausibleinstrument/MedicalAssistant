@@ -1,0 +1,156 @@
+-- Dad's Medical Records — Supabase schema
+-- Run this once in the Supabase SQL editor (Project -> SQL Editor -> New query).
+-- Safe to re-run: tables/indexes use "if not exists"; policies are dropped
+-- and recreated so re-running this script won't error.
+
+-- ============================================================
+-- 1. profiles: one row per family member who has redeemed an
+--    invite (or is the owner). Presence in this table is what
+--    grants access to every record in the app.
+-- ============================================================
+create table if not exists profiles (
+  id uuid primary key references auth.users (id) on delete cascade,
+  email text not null,
+  full_name text,
+  role text not null default 'member' check (role in ('owner', 'member')),
+  created_at timestamptz not null default now()
+);
+
+alter table profiles enable row level security;
+
+drop policy if exists "profiles are visible to family members" on profiles;
+create policy "profiles are visible to family members"
+  on profiles for select
+  using (auth.uid() in (select id from profiles));
+
+drop policy if exists "users can insert their own profile" on profiles;
+create policy "users can insert their own profile"
+  on profiles for insert
+  with check (auth.uid() = id);
+
+-- ============================================================
+-- 2. invite_codes: codes the owner generates and hands to a
+--    family member. Redeeming one creates a profiles row.
+-- ============================================================
+create table if not exists invite_codes (
+  id uuid primary key default gen_random_uuid(),
+  code text not null unique,
+  created_by uuid not null references auth.users (id),
+  max_uses int not null default 1,
+  uses int not null default 0,
+  expires_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
+alter table invite_codes enable row level security;
+
+drop policy if exists "family members manage invite codes" on invite_codes;
+create policy "family members manage invite codes"
+  on invite_codes for select
+  using (auth.uid() in (select id from profiles));
+
+drop policy if exists "family members create invite codes" on invite_codes;
+create policy "family members create invite codes"
+  on invite_codes for insert
+  with check (auth.uid() in (select id from profiles));
+
+-- Redemption (the update that increments `uses`) happens through the
+-- /api/invite/redeem server route using the service role key, which
+-- bypasses RLS by design — a brand-new user has no profiles row yet
+-- and so could not update this table under RLS.
+
+-- ============================================================
+-- 3. doctors
+-- ============================================================
+create table if not exists doctors (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  specialty text,
+  hospital_or_clinic text,
+  phone text,
+  notes text,
+  created_by uuid references auth.users (id),
+  created_at timestamptz not null default now()
+);
+
+alter table doctors enable row level security;
+
+drop policy if exists "family members full access to doctors" on doctors;
+create policy "family members full access to doctors"
+  on doctors for all
+  using (auth.uid() in (select id from profiles))
+  with check (auth.uid() in (select id from profiles));
+
+-- ============================================================
+-- 4. documents: the core record — bills, prescriptions, test
+--    reports, doctor's notes, discharge summaries.
+-- ============================================================
+create table if not exists documents (
+  id uuid primary key default gen_random_uuid(),
+  title text not null,
+  doc_type text not null check (
+    doc_type in ('bill', 'prescription', 'test_report', 'doctors_note', 'discharge_summary', 'other')
+  ),
+  doctor_id uuid references doctors (id) on delete set null,
+  document_date date not null,
+  conditions text[] not null default '{}', -- e.g. {cancer, uc, diabetes, ckd, general}
+  summary text,
+  amount numeric,
+  file_path text not null, -- path inside the private "medical-documents" storage bucket
+  file_name text not null,
+  mime_type text,
+  uploaded_by uuid references auth.users (id),
+  created_at timestamptz not null default now()
+);
+
+alter table documents enable row level security;
+
+drop policy if exists "family members full access to documents" on documents;
+create policy "family members full access to documents"
+  on documents for all
+  using (auth.uid() in (select id from profiles))
+  with check (auth.uid() in (select id from profiles));
+
+create index if not exists documents_date_idx on documents (document_date desc);
+create index if not exists documents_type_idx on documents (doc_type);
+create index if not exists documents_doctor_idx on documents (doctor_id);
+create index if not exists documents_conditions_idx on documents using gin (conditions);
+
+-- ============================================================
+-- 5. Storage bucket for the actual files (private — no public
+--    access; every read goes through a short-lived signed URL
+--    generated server-side after checking the user is a family
+--    member).
+-- ============================================================
+insert into storage.buckets (id, name, public)
+values ('medical-documents', 'medical-documents', false)
+on conflict (id) do nothing;
+
+drop policy if exists "family members read documents bucket" on storage.objects;
+create policy "family members read documents bucket"
+  on storage.objects for select
+  using (bucket_id = 'medical-documents' and auth.uid() in (select id from profiles));
+
+drop policy if exists "family members upload to documents bucket" on storage.objects;
+create policy "family members upload to documents bucket"
+  on storage.objects for insert
+  with check (bucket_id = 'medical-documents' and auth.uid() in (select id from profiles));
+
+drop policy if exists "family members delete from documents bucket" on storage.objects;
+create policy "family members delete from documents bucket"
+  on storage.objects for delete
+  using (bucket_id = 'medical-documents' and auth.uid() in (select id from profiles));
+
+-- ============================================================
+-- 6. Bootstrap: make yourself the owner after your first Google
+--    sign-in. Sign in once through the app (you'll land on a
+--    "waiting for invite" screen since you have no profile yet),
+--    then run this (replace the email) so you have a profile to
+--    start from. Every other family member is added via an
+--    invite code you generate from the Settings page once you're in.
+-- ============================================================
+-- insert into profiles (id, email, role)
+-- select id, email, 'owner'
+-- from auth.users
+-- where email = 'YOUR-EMAIL@gmail.com'
+-- on conflict (id) do nothing;

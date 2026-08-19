@@ -25,6 +25,14 @@ export const CONDITION_LABELS: Record<Condition, string> = {
   general: "General",
 };
 
+export interface DoctorAssistant {
+  id: string;
+  doctor_id: string;
+  name: string;
+  phone: string | null;
+  created_at: string;
+}
+
 export interface Doctor {
   id: string;
   name: string;
@@ -33,6 +41,7 @@ export interface Doctor {
   phone: string | null;
   notes: string | null;
   created_at: string;
+  doctor_assistants?: DoctorAssistant[]; // populated via join
 }
 
 export interface DocumentRecord {

@@ -34,5 +34,23 @@ export async function POST(request: Request) {
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  const assistants = Array.isArray(body.assistants)
+    ? body.assistants
+        .filter((a: { name?: string }) => a?.name && a.name.trim())
+        .map((a: { name: string; phone?: string }) => ({
+          doctor_id: data.id,
+          name: a.name.trim(),
+          phone: a.phone?.trim() || null,
+        }))
+    : [];
+
+  if (assistants.length > 0) {
+    const { error: assistantsError } = await supabase.from("doctor_assistants").insert(assistants);
+    if (assistantsError) {
+      return NextResponse.json({ error: assistantsError.message }, { status: 500 });
+    }
+  }
+
   return NextResponse.json({ doctor: data });
 }

@@ -17,17 +17,18 @@ features (pay-as-you-go, no subscription).
 
 ## How access control works
 
-There's no separate password system. Access is: **Google sign-in + a one-time invite code you
-generate.**
+There's no separate password system. Access is: **Google sign-in + an invite code you generate.**
 
 1. You (the owner) sign in with Google once, then bootstrap yourself as the owner via one SQL
    statement (below).
 2. From **Settings**, you generate an invite code (a random string like `FAMILY-7K2M9P`, valid for
-   14 days, single-use by default).
-3. You send that code to your brother (WhatsApp, email, whatever) along with the site URL.
-4. He opens the site, signs in with **his own Google account**, and is prompted for the code since
-   he has no access yet. Entering it links his account permanently — after that he just signs in
-   with Google, no code needed again.
+   14 days). You choose how many people it can be used by — the same code can be shared with
+   several family members; each of them enters it once when they first sign in, and it stops
+   working once that many people have used it (or it expires).
+3. You send that code to your family (WhatsApp, email, whatever) along with the site URL.
+4. Each person opens the site, signs in with **their own Google account**, and is prompted for the
+   code since they have no access yet. Entering it links their account permanently — after that
+   they just sign in with Google, no code needed again.
 5. Nobody else can get in: without a valid, unused invite code, a Google sign-in gets you to a
    "enter your invite code" screen and nowhere else. Every table's Row Level Security policy
    (see `supabase/schema.sql`) requires the signed-in user to already have a `profiles` row, so
@@ -107,10 +108,12 @@ Finally, go back to Supabase **Authentication → URL Configuration** and update
 ## Using it
 
 - **Dashboard** — filterable list of every record (by type, doctor, condition, date range, search).
-- **Add** — upload a PDF or photo. Click "Auto-fill from file with AI" to have Claude read the
-  document and suggest a title, type, doctor, date, condition tags, and summary — review and edit
-  before saving; it's a time-saver, not an autopilot.
-- **Doctors** — a simple contact list, auto-populated as you tag documents with doctor names.
+- **Add** — upload a PDF, choose an existing photo, or take one with your phone's camera. As soon
+  as a file is selected, Claude reads it and auto-fills title, type, doctor, date, condition tags,
+  and summary — review and edit before saving (there's a "Re-run auto-fill" button if it needs
+  another pass). Every field is required to save, so records stay consistently filled in.
+- **Doctors** — a contact list, auto-populated as you tag documents with doctor names. Each doctor
+  can have one or more assistants on file (name + phone), added at creation or any time after.
 - **Prep for Visit** — pick a doctor and/or condition(s) and a date range, and get a structured
   markdown report: timeline since the last relevant record, trends the data supports (it won't
   invent ones it can't support), medications mentioned, and questions worth asking. Printable to

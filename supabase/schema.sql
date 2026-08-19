@@ -82,6 +82,28 @@ create policy "family members full access to doctors"
   with check (auth.uid() in (select id from profiles));
 
 -- ============================================================
+-- 3b. doctor_assistants: a doctor can have more than one — each
+--     row is one assistant's name/phone tied to a doctor.
+-- ============================================================
+create table if not exists doctor_assistants (
+  id uuid primary key default gen_random_uuid(),
+  doctor_id uuid not null references doctors (id) on delete cascade,
+  name text not null,
+  phone text,
+  created_at timestamptz not null default now()
+);
+
+alter table doctor_assistants enable row level security;
+
+drop policy if exists "family members full access to doctor assistants" on doctor_assistants;
+create policy "family members full access to doctor assistants"
+  on doctor_assistants for all
+  using (auth.uid() in (select id from profiles))
+  with check (auth.uid() in (select id from profiles));
+
+create index if not exists doctor_assistants_doctor_idx on doctor_assistants (doctor_id);
+
+-- ============================================================
 -- 4. documents: the core record — bills, prescriptions, test
 --    reports, doctor's notes, discharge summaries.
 -- ============================================================

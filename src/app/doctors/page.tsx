@@ -1,7 +1,9 @@
 import Nav from "@/components/Nav";
 import DoctorForm from "@/components/DoctorForm";
+import AssistantManager from "@/components/AssistantManager";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import { Doctor } from "@/lib/types";
 
 export default async function DoctorsPage() {
   const supabase = createClient();
@@ -17,7 +19,10 @@ export default async function DoctorsPage() {
     .maybeSingle();
   if (!profile) redirect("/invite");
 
-  const { data: doctors } = await supabase.from("doctors").select("*").order("name");
+  const { data: doctors } = await supabase
+    .from("doctors")
+    .select("*, doctor_assistants(*)")
+    .order("name");
 
   return (
     <div>
@@ -28,13 +33,14 @@ export default async function DoctorsPage() {
         </div>
         <DoctorForm />
         <div className="space-y-2">
-          {doctors?.map((d) => (
+          {(doctors as Doctor[] | null)?.map((d) => (
             <div key={d.id} className="card">
               <h3 className="font-medium">{d.name}</h3>
               <p className="text-sm text-stone-500">
                 {[d.specialty, d.hospital_or_clinic].filter(Boolean).join(" · ")}
               </p>
               {d.phone && <p className="text-sm text-stone-400">{d.phone}</p>}
+              <AssistantManager doctorId={d.id} assistants={d.doctor_assistants || []} />
             </div>
           ))}
           {doctors && doctors.length === 0 && (

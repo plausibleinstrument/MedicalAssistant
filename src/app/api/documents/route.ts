@@ -32,6 +32,18 @@ export async function POST(request: Request) {
   if (!title || !doc_type || !document_date || !file_path || !file_name) {
     return NextResponse.json({ error: "Missing required fields." }, { status: 400 });
   }
+  if (!doctor_name || !doctor_name.trim()) {
+    return NextResponse.json({ error: "Doctor is required." }, { status: 400 });
+  }
+  if (!Array.isArray(conditions) || conditions.length === 0) {
+    return NextResponse.json({ error: "Select at least one related condition." }, { status: 400 });
+  }
+  if (!summary || !summary.trim()) {
+    return NextResponse.json({ error: "Summary is required." }, { status: 400 });
+  }
+  if (doc_type === "bill" && (amount === "" || amount == null)) {
+    return NextResponse.json({ error: "Amount is required for a bill." }, { status: 400 });
+  }
 
   let doctor_id: string | null = null;
 

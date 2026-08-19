@@ -3,6 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
+interface AssistantRow {
+  name: string;
+  phone: string;
+}
+
 export default function DoctorForm() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -10,8 +15,17 @@ export default function DoctorForm() {
   const [specialty, setSpecialty] = useState("");
   const [hospital, setHospital] = useState("");
   const [phone, setPhone] = useState("");
+  const [assistants, setAssistants] = useState<AssistantRow[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  function updateAssistant(i: number, field: keyof AssistantRow, value: string) {
+    setAssistants((prev) => prev.map((a, idx) => (idx === i ? { ...a, [field]: value } : a)));
+  }
+
+  function removeAssistant(i: number) {
+    setAssistants((prev) => prev.filter((_, idx) => idx !== i));
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -25,6 +39,7 @@ export default function DoctorForm() {
         specialty,
         hospital_or_clinic: hospital,
         phone,
+        assistants,
       }),
     });
     const data = await res.json();
@@ -37,6 +52,7 @@ export default function DoctorForm() {
     setSpecialty("");
     setHospital("");
     setPhone("");
+    setAssistants([]);
     setOpen(false);
     router.refresh();
   }
@@ -69,6 +85,43 @@ export default function DoctorForm() {
           <input className="input" value={phone} onChange={(e) => setPhone(e.target.value)} />
         </div>
       </div>
+
+      <div>
+        <label className="label">Assistant(s) — optional, add as many as needed</label>
+        <div className="space-y-2">
+          {assistants.map((a, i) => (
+            <div key={i} className="flex flex-wrap items-center gap-2">
+              <input
+                className="input flex-1"
+                placeholder="Assistant name"
+                value={a.name}
+                onChange={(e) => updateAssistant(i, "name", e.target.value)}
+              />
+              <input
+                className="input flex-1"
+                placeholder="Phone"
+                value={a.phone}
+                onChange={(e) => updateAssistant(i, "phone", e.target.value)}
+              />
+              <button
+                type="button"
+                className="text-sm text-red-500 hover:underline"
+                onClick={() => removeAssistant(i)}
+              >
+                Remove
+              </button>
+            </div>
+          ))}
+        </div>
+        <button
+          type="button"
+          className="mt-2 text-sm text-brand-700 hover:underline"
+          onClick={() => setAssistants((prev) => [...prev, { name: "", phone: "" }])}
+        >
+          + Add assistant
+        </button>
+      </div>
+
       {error && <p className="text-sm text-red-600">{error}</p>}
       <div className="flex gap-2">
         <button className="btn-primary" disabled={saving}>

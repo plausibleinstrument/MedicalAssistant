@@ -142,7 +142,63 @@ create policy "family members delete from documents bucket"
   using (bucket_id = 'medical-documents' and auth.uid() in (select id from profiles));
 
 -- ============================================================
--- 6. Bootstrap: make yourself the owner after your first Google
+-- 6. case_summary: an append-only log of AI-maintained "state of
+--    Dad's case" summaries. Each regeneration inserts a new row
+--    (from the "Update case summary" button); the app always reads
+--    the most recent row as current. Keeping the history lets you
+--    see how the summary evolved, and there's no update/delete
+--    policy since it's meant to be a log, not an editable doc.
+-- ============================================================
+create table if not exists case_summary (
+  id uuid primary key default gen_random_uuid(),
+  content text not null,
+  updated_by uuid references auth.users (id),
+  created_at timestamptz not null default now()
+);
+
+alter table case_summary enable row level security;
+
+drop policy if exists "family members read case summary" on case_summary;
+create policy "family members read case summary"
+  on case_summary for select
+  using (auth.uid() in (select id from profiles));
+
+drop policy if exists "family members write case summary" on case_summary;
+create policy "family members write case summary"
+  on case_summary for insert
+  with check (auth.uid() in (select id from profiles));
+
+create index if not exists case_summary_created_idx on case_summary (created_at desc);
+
+-- ============================================================
+-- 7. chat_messages: a single shared "Ask about Dad's case" thread
+--    that the whole family sees and can add to. Append-only, like
+--    case_summary.
+-- ============================================================
+create table if not exists chat_messages (
+  id uuid primary key default gen_random_uuid(),
+  role text not null check (role in ('user', 'assistant')),
+  content text not null,
+  created_by uuid references auth.users (id),
+  created_at timestamptz not null default now()
+);
+
+alter table chat_messages enable row level security;
+
+drop policy if exists "family members read chat messages" on chat_messages;
+create policy "family members read chat messages"
+  on chat_messages for select
+  using (auth.uid() in (select id from profiles));
+
+drop policy if exists "family members write chat messages" on chat_messages;
+create policy "family members write chat messages"
+  on chat_messages for insert
+  with check (auth.uid() in (select id from profiles));
+
+create index if not exists chat_messages_created_idx on chat_messages (created_at asc);
+
+-- ============================================================
+-- 8. Bootstrap: make yourself the owner after your first Google
 --    sign-in. Sign in once through the app (you'll land on a
 --    "waiting for invite" screen since you have no profile yet),
 --    then run this (replace the email) so you have a profile to

@@ -59,3 +59,18 @@ export interface Profile {
   role: "owner" | "member";
   created_at: string;
 }
+
+export interface CaseSummary {
+  id: string;
+  content: string;
+  updated_by: string | null;
+  created_at: string;
+}
+
+export interface ChatMessage {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  created_by: string | null;
+  created_at: string;
+}

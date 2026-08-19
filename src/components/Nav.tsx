@@ -27,6 +27,12 @@ export default async function Nav() {
           <Link href="/prep" className="text-stone-600 hover:text-stone-900">
             Prep for Visit
           </Link>
+          <Link href="/case-summary" className="text-stone-600 hover:text-stone-900">
+            Case Summary
+          </Link>
+          <Link href="/ask" className="btn-primary px-3 py-1.5">
+            Ask
+          </Link>
           <Link href="/settings" className="text-stone-600 hover:text-stone-900">
             Settings
           </Link>

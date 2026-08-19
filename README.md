@@ -115,6 +115,13 @@ Finally, go back to Supabase **Authentication → URL Configuration** and update
   markdown report: timeline since the last relevant record, trends the data supports (it won't
   invent ones it can't support), medications mentioned, and questions worth asking. Printable to
   PDF straight from the browser.
+- **Case Summary** — a living "state of the case" summary (conditions, care team, current
+  medications, recent developments, open questions) that Claude maintains over time. Click "Update
+  case summary" any time new records come in; each update is saved so there's a history of how the
+  picture has evolved, and the latest one is always shown.
+- **Ask** — a shared chat thread for open-ended questions about Dad's case ("what did the last
+  oncology visit say?"), grounded in the current case summary plus every record on file. The whole
+  family sees and can add to the same thread.
 - **Settings** — generate invite codes (owner only), see who has access.
 
 ## Known limitations / good next steps

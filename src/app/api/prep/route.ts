@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { getAnthropicClient, ANTHROPIC_MODEL } from "@/lib/anthropic";
+import { formatDocumentsForPrompt } from "@/lib/documents";
 import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
@@ -48,12 +49,7 @@ export async function POST(request: Request) {
     });
   }
 
-  const recordsText = documents
-    .map((d) => {
-      const doctorLabel = d.doctors ? `${d.doctors.name}${d.doctors.specialty ? ` (${d.doctors.specialty})` : ""}` : "unspecified doctor";
-      return `- [${d.document_date}] ${d.doc_type.toUpperCase()} — ${d.title} — Doctor: ${doctorLabel} — Conditions: ${(d.conditions || []).join(", ") || "none tagged"}${d.amount != null ? ` — Amount: ${d.amount}` : ""}\n  Summary: ${d.summary || "(no summary recorded)"}`;
-    })
-    .join("\n");
+  const recordsText = formatDocumentsForPrompt(documents);
 
   const systemPrompt = `You are helping a family member prepare for an upcoming doctor's appointment for their elderly father, whose case is complex: he has cancer, ulcerative colitis (UC), diabetes, and chronic kidney disease (CKD), all being managed concurrently across multiple specialists.
 

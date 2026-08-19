@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { getAnthropicClient, ANTHROPIC_MODEL } from "@/lib/anthropic";
 import { formatDocumentsForPrompt } from "@/lib/documents";
+import { formatFamilyNotesForPrompt, getAuthorNames } from "@/lib/familyNotes";
 import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
@@ -51,20 +52,30 @@ export async function POST(request: Request) {
 
   const recordsText = formatDocumentsForPrompt(documents);
 
+  let noteQuery = supabase
+    .from("family_notes")
+    .select("*")
+    .order("created_at", { ascending: true });
+  if (from) noteQuery = noteQuery.gte("created_at", from);
+  if (to) noteQuery = noteQuery.lte("created_at", `${to}T23:59:59`);
+  const [{ data: notes }, authorNames] = await Promise.all([noteQuery, getAuthorNames(supabase)]);
+  const notesText = formatFamilyNotesForPrompt(notes || [], authorNames);
+
   const systemPrompt = `You are helping a family member prepare for an upcoming doctor's appointment for their elderly father, whose case is complex: he has cancer, ulcerative colitis (UC), diabetes, and chronic kidney disease (CKD), all being managed concurrently across multiple specialists.
 
-You will be given a chronological list of his medical records (bills, prescriptions, test reports, doctor's notes, discharge summaries) with short summaries that a family member typed in — not full lab data. Work only from what's given; do not invent lab values, diagnoses, or medication details that aren't present.
+You will be given a chronological list of his medical records (bills, prescriptions, test reports, doctor's notes, discharge summaries) with short summaries that a family member typed in — not full lab data — plus a separate log of informal notes family members have left for each other (observations, phone calls with the clinic, things Dad mentioned). Work only from what's given; do not invent lab values, diagnoses, or medication details that aren't present. Treat the family notes as color and context, not clinical fact — they haven't been verified by a doctor.
 
 Structure your response in this order, using markdown headers:
 1. **Timeline since the last relevant record** — what's changed, in date order.
 2. **Trends worth flagging** — only mention a trend if the summaries actually contain comparable data points across visits (e.g. two creatinine readings). If there isn't enough data for a condition, say so explicitly rather than guessing.
 3. **Current medications mentioned in these records** — a plain list, noting the source document and date for each, since medication lists in real life go stale.
-4. **Questions worth asking this doctor** — informed by gaps (things mentioned once and never followed up on), overlaps between specialists worth reconciling, and anything not yet explained.
-5. A short closing line: this is an organizing tool built from the family's own notes, not medical advice — the doctor makes the clinical calls.
+4. **Worth mentioning from family notes** — anything from the family notes log that's relevant to this appointment (a symptom mentioned at home, a call with the clinic) and not already captured in the formal records. Omit this section if nothing in the notes is relevant.
+5. **Questions worth asking this doctor** — informed by gaps (things mentioned once and never followed up on), overlaps between specialists worth reconciling, family-reported observations worth raising, and anything not yet explained.
+6. A short closing line: this is an organizing tool built from the family's own notes, not medical advice — the doctor makes the clinical calls.
 
 Keep it concise and scannable — this will be read on a phone in a waiting room.`;
 
-  const userPrompt = `${appointmentContext ? `Context for this specific appointment: ${appointmentContext}\n\n` : ""}Here are the matching records, oldest first:\n\n${recordsText}`;
+  const userPrompt = `${appointmentContext ? `Context for this specific appointment: ${appointmentContext}\n\n` : ""}Here are the matching records, oldest first:\n\n${recordsText}\n\n---\n\nFamily notes from the same period:\n\n${notesText}`;
 
   try {
     const client = getAnthropicClient();

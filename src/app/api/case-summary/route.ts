@@ -1,11 +1,12 @@
 import { createClient } from "@/lib/supabase/server";
 import { getAnthropicClient, ANTHROPIC_MODEL } from "@/lib/anthropic";
 import { formatDocumentsForPrompt } from "@/lib/documents";
+import { formatFamilyNotesForPrompt, getAuthorNames } from "@/lib/familyNotes";
 import { NextResponse } from "next/server";
 
 const SYSTEM_PROMPT = `You maintain a living "state of the case" summary for an elderly father whose case is complex: he has cancer, ulcerative colitis (UC), diabetes, and chronic kidney disease (CKD), all managed concurrently across multiple specialists.
 
-You will be given the previous version of this summary (if one exists) and the full chronological list of his medical records (bills, prescriptions, test reports, doctor's notes, discharge summaries) with short summaries a family member typed in — not full lab data. Work only from what's given; do not invent lab values, diagnoses, or medication details that aren't present.
+You will be given the previous version of this summary (if one exists), the full chronological list of his medical records (bills, prescriptions, test reports, doctor's notes, discharge summaries) with short summaries a family member typed in — not full lab data — and a separate log of informal notes family members have left for each other (observations, phone calls with the clinic, things Dad mentioned). Work only from what's given; do not invent lab values, diagnoses, or medication details that aren't present. Treat the family notes as color and context, not clinical fact — they haven't been verified by a doctor, so keep them clearly distinct from the formal record.
 
 Write an updated summary from scratch that reflects the complete current picture — don't just append to the old one. If the previous summary said something that the records no longer support or that's since changed, update or drop it rather than repeating it verbatim.
 
@@ -14,8 +15,9 @@ Structure your response with markdown headers:
 2. **Care team** — doctors involved and their specialty/role, drawn from the records.
 3. **Current medications** — best current understanding, noting the source document and date for each since lists go stale.
 4. **Recent developments** — what's changed lately, in date order.
-5. **Open questions / things to watch** — gaps, unresolved threads, or things worth following up on.
-6. A short closing line: this is an organizing summary built from the family's own notes, not a diagnosis — doctors make the clinical calls.
+5. **From family notes** — relevant observations or context from the family notes log that aren't yet reflected in the formal records. Say plainly this is family-reported, not clinical documentation. Omit this section if there's nothing relevant.
+6. **Open questions / things to watch** — gaps, unresolved threads, or things worth following up on.
+7. A short closing line: this is an organizing summary built from the family's own notes, not a diagnosis — doctors make the clinical calls.
 
 Keep it concise and scannable.`;
 
@@ -80,9 +82,16 @@ export async function POST() {
     .limit(1)
     .maybeSingle();
 
+  const [{ data: notes }, authorNames] = await Promise.all([
+    supabase.from("family_notes").select("*").order("created_at", { ascending: true }),
+    getAuthorNames(supabase),
+  ]);
+
   const userPrompt = `${
     previous ? `Previous summary:\n\n${previous.content}\n\n---\n\n` : "There is no previous summary yet — this is the first one.\n\n"
-  }Here are all the records on file, oldest first:\n\n${formatDocumentsForPrompt(documents)}`;
+  }Here are all the records on file, oldest first:\n\n${formatDocumentsForPrompt(
+    documents
+  )}\n\n---\n\nAll family notes on file:\n\n${formatFamilyNotesForPrompt(notes || [], authorNames)}`;
 
   try {
     const client = getAnthropicClient();

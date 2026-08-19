@@ -83,3 +83,10 @@ export interface ChatMessage {
   created_by: string | null;
   created_at: string;
 }
+
+export interface FamilyNote {
+  id: string;
+  content: string;
+  created_by: string | null;
+  created_at: string;
+}

@@ -10,6 +10,7 @@ const LINKS = [
   { href: "/doctors", key: "doctors" },
   { href: "/prep", key: "prep" },
   { href: "/case-summary", key: "summary" },
+  { href: "/notes", key: "notes" },
 ] as const;
 
 export default async function Nav() {

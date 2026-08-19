@@ -125,6 +125,10 @@ Finally, go back to Supabase **Authentication → URL Configuration** and update
 - **Ask** — a shared chat thread for open-ended questions about Dad's case ("what did the last
   oncology visit say?"), grounded in the current case summary plus every record on file. The whole
   family sees and can add to the same thread.
+- **Family Notes** — a plain group-chat thread for the family itself, not AI-driven — quick
+  observations like "Dad mentioned his knee hurts" or "called the clinic, they said…". Claude reads
+  this log too: Prep for Visit and the Case Summary both factor in relevant notes, kept clearly
+  labeled as family-reported rather than clinical fact.
 - **Settings** — generate invite codes (owner only), see who has access.
 
 ## Troubleshooting

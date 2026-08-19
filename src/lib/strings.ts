@@ -11,6 +11,7 @@ export const STRINGS = {
     doctors: "Doctors",
     prep: "Prep for Visit",
     summary: "Case Summary",
+    notes: "Family Notes",
     signOut: "Sign out",
 
     todayKicker: "Today",
@@ -44,6 +45,7 @@ export const STRINGS = {
     doctors: "डॉक्टर",
     prep: "मुलाक़ात की तैयारी",
     summary: "केस सारांश",
+    notes: "पारिवारिक टिप्पणियाँ",
     signOut: "साइन आउट",
 
     todayKicker: "आज",

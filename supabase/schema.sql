@@ -240,7 +240,37 @@ create policy "family members write chat messages"
 create index if not exists chat_messages_created_idx on chat_messages (created_at asc);
 
 -- ============================================================
--- 8. Bootstrap: make yourself the owner after your first Google
+-- 8. family_notes: a shared group-chat-style thread for family
+--    members to leave notes/observations for each other — e.g. "Dad
+--    mentioned his knee hurts", "called the clinic, they said...".
+--    Distinct from chat_messages (the AI "Ask" thread): this is
+--    human-to-human, written by family members, but its content is
+--    fed into Prep for Visit and the Case Summary as extra context
+--    Claude can draw on alongside the formal records.
+-- ============================================================
+create table if not exists family_notes (
+  id uuid primary key default gen_random_uuid(),
+  content text not null,
+  created_by uuid references auth.users (id),
+  created_at timestamptz not null default now()
+);
+
+alter table family_notes enable row level security;
+
+drop policy if exists "family members read family notes" on family_notes;
+create policy "family members read family notes"
+  on family_notes for select
+  using (is_family_member(auth.uid()));
+
+drop policy if exists "family members write family notes" on family_notes;
+create policy "family members write family notes"
+  on family_notes for insert
+  with check (is_family_member(auth.uid()));
+
+create index if not exists family_notes_created_idx on family_notes (created_at asc);
+
+-- ============================================================
+-- 9. Bootstrap: make yourself the owner after your first Google
 --    sign-in. Sign in once through the app (you'll land on a
 --    "waiting for invite" screen since you have no profile yet),
 --    then run this (replace the email) so you have a profile to
